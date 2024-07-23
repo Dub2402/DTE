@@ -33,7 +33,9 @@ python main.py
 
 Можно указать в настройках бота в [BotFather](https://t.me/BotFather).
 
-Команда - действие.
+create - Создание события
+
+list - просмотр событий
 
 ---
 
