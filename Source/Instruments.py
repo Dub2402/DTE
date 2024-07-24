@@ -1,19 +1,20 @@
-from datetime import datetime, date
+from datetime import date
+import dateparser
 
 def CheckValidDate(Date: str)-> bool:
 	try:
-		datetime.fromisoformat(Date)
+		dateparser.parse(Date, settings={'DATE_ORDER': 'DMY'}).date()
 		return True
-	except ValueError:
+	except:
 		return False
 
-def Calculator(event) -> int:
+def Calculator(event: str) -> int:
 	today = date.today()
-	remains = (date.fromisoformat(event) - today).days
+	remains = (dateparser.parse(event, settings={'DATE_ORDER': 'DMY'}).date() - today).days
 	
 	return remains
 
-def GetFreeID(Events) -> int:
+def GetFreeID(Events: dict) -> int:
 	Increment = list()
 	for key in Events.keys():
 		Increment.append(key)
