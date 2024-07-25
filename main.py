@@ -31,21 +31,26 @@ ReplyKeyboardBox = ReplyKeyboard()
 def ProcessCommandStart(Message: types.Message):
 	User = Manager.auth(Message.from_user)
 
-	try:
-		User.get_property("events")
-	except KeyError:
-		User.set_property("events", {})
+	User.set_property("events", {}, False)
 	Bot.send_message(
 		Message.chat.id, 
-		"Добро пожаловать!\n\nЯ бот, помогающий запоминать события и указывать, сколько дней до них осталось."
+		"🎉 Добро пожаловать! 🎉\n\nЯ бот, помогающий запоминать события и узнавать, сколько дней до них осталось."
 		)
 	sleep(0.5)
-	Bot.send_message(
-		Message.chat.id, 
-		"Давайте познакомимся!\n\nНапишите свое имя! 🤗")
-	User.set_expected_type("call")
-	
-@Bot.message_handler(content_types = ["text"], regexp = "Новое событие")
+	try:
+		call = User.get_property("call")
+		
+		Bot.send_message(
+			Message.chat.id, 
+			f"{call}, мы рады вновь видеть вас! 🤗",
+			reply_markup= ReplyKeyboardBox.AddMenu(User))
+	except KeyError:
+		Bot.send_message(
+			Message.chat.id, 
+			"Давайте познакомимся!\nНапишите свое имя! 🤗")
+		User.set_expected_type("call")
+
+@Bot.message_handler(content_types = ["text"], regexp = "➕ Новое событие")
 def ProcessTextNewEvent(Message: types.Message):
 	User = Manager.auth(Message.from_user)
 
@@ -56,7 +61,7 @@ def ProcessTextNewEvent(Message: types.Message):
 		)
 	User.set_expected_type("name")
 
-@Bot.message_handler(content_types = ["text"], regexp = "Мои события")
+@Bot.message_handler(content_types = ["text"], regexp = "🗓 Мои события")
 def ProcessTextMyEvents(Message: types.Message):
 	# Авторизация пользователя.
 	User = Manager.auth(Message.from_user)
@@ -64,12 +69,18 @@ def ProcessTextMyEvents(Message: types.Message):
 	if not User.get_property("events"):
 		Bot.send_message(
 			Message.chat.id, 
-			"Вы не создали ни одного события 🙄\nНужно это дело исправить\\!\\)\n\nИспользуйте кнопку *Новое событие*\\.",
-			parse_mode = "MarkdownV2"
+			"Вы не создали ни одного события 🙄\nНужно это дело исправить\\!\\)",
+			parse_mode = "MarkdownV2", 
+			reply_markup= InlineKeyboardsBox.AddNewEvent()
 			)
 
 	else:
+		call = Markdown(str(User.get_property("call"))).escaped_text
 		somedict = User.get_property("events").copy()
+		Bot.send_message(
+					Message.chat.id,
+					f"Приветствую, {call}\\!",
+					parse_mode = "MarkdownV2")
 		for EventID in somedict.keys():
 			remains = Calculator(User.get_property("events")[EventID]["Date"])
 			name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
@@ -83,28 +94,60 @@ def ProcessTextMyEvents(Message: types.Message):
 				Bot.send_message(
 					Message.chat.id,
 					f"Ваше событие *{name}* сегодня\\.",
-					reply_markup = InlineKeyboardsBox.RemoveEvent(EventID),
 					parse_mode = "MarkdownV2")
 
 			elif remains > 0:
 				remains = Markdown(str(remains)).escaped_text
-				call = Markdown(str(User.get_property("call"))).escaped_text
 				Bot.send_message(
-					Message.chat.id, f"{call}, до события *{name}* осталось {remains} {days}\\!\n\nДождёмся\\!\\!\\!",
-					reply_markup = InlineKeyboardsBox.RemoveEvent(EventID),
+					Message.chat.id, f"До события *{name}* осталось {remains} {days}\\!",
 					parse_mode = "MarkdownV2"
 				)
 			else:
 				remains = Markdown(str(abs(remains))).escaped_text
 				call = Markdown(str(User.get_property("call"))).escaped_text
 				Bot.send_message(
-					Message.chat.id, f"{call}, событие *{name}* было {remains} {days} назад\\!",
-					reply_markup = InlineKeyboardsBox.RemoveEvent(EventID),
+					Message.chat.id, f"Событие *{name}* было {remains} {days} назад\\!",
 					parse_mode = "MarkdownV2"
 				)
 			sleep(0.15)
-		
-@Bot.message_handler(content_types = ["text"], regexp = "Поделиться с друзьями")
+
+@Bot.message_handler(content_types = ["text"], regexp = "🗑 Удалить событие")
+def ProcessTextMyEvents(Message: types.Message):
+	# Авторизация пользователя.
+	User = Manager.auth(Message.from_user)
+
+	if not User.get_property("events"):
+		Bot.send_message(
+			Message.chat.id, 
+			"Вы не создали ни одного события 🙄\nНужно это дело исправить\\!\\)",
+			parse_mode = "MarkdownV2", 
+			reply_markup= InlineKeyboardsBox.AddNewEvent()
+			)
+
+	else:
+		somedict = User.get_property("events").copy()
+		Bot.send_message(
+					Message.chat.id,
+					f"Ваши события: ")
+		for EventID in somedict.keys():
+			name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
+			Bot.send_message(
+				Message.chat.id,
+				f"*{name}*",
+				reply_markup = InlineKeyboardsBox.RemoveEvent(EventID),
+				parse_mode = "MarkdownV2")
+			sleep(0.15)
+
+@Bot.message_handler(content_types = ["text"], regexp = "🔁 Изменить имя")
+def ProcessTextMyEvents(Message: types.Message):
+	# Авторизация пользователя.
+	User = Manager.auth(Message.from_user)
+	Bot.send_message(
+		Message.chat.id,
+		"Напишите свое новое имя! 😎")
+	User.set_expected_type("call")
+
+@Bot.message_handler(content_types = ["text"], regexp = "📢 Поделиться с друзьями")
 def ProcessShareWithFriends(Message: types.Message):
 	User = Manager.auth(Message.from_user)
 
@@ -114,19 +157,26 @@ def ProcessShareWithFriends(Message: types.Message):
 		reply_markup=InlineKeyboardsBox.AddShare()
 		)
 
-	User.set_expected_type("name")
-
 @Bot.message_handler(content_types=["text"])
 def ProcessText(Message: types.Message):
 	User = Manager.auth(Message.from_user)
 	if User.expected_type == "call":
 		User.set_property("call", Message.text)
 
+		call = Markdown(str(User.get_property("call"))).escaped_text
 		Bot.send_message(
-		Message.chat.id,
-		"Для начала работы с ботом нажмите на любую кнопку.",
+			Message.chat.id,
+			f"Приятно познакомиться, {call}!",
 		reply_markup = ReplyKeyboardBox.AddMenu(User)
 		)
+		sleep(0.5)
+		if not User.get_property("events"):
+			Bot.send_message(
+			Message.chat.id, 
+			text= "Для начала работы с ботом создайте своё первое событие! 🙌",
+			reply_markup = InlineKeyboardsBox.AddNewEvent()
+			)
+		User.set_expected_type(None)
 		return
 	
 	if User.expected_type == "date":
@@ -138,22 +188,29 @@ def ProcessText(Message: types.Message):
 			Events[FreeID] = {"Name": User.get_property("date"), "Date": Date}
 			User.set_property("events", Events)
 			remains = Calculator(User.get_property("events")[FreeID]["Date"])
+			name = Markdown(User.get_property("events")[FreeID]["Name"]).escaped_text
+			days = "дней"
+
+			if abs(remains) in [11, 12, 13]: pass
+			elif str(remains).endswith("1"): days = "день"
+			elif str(remains).endswith("2") or str(remains).endswith("3") or str(remains).endswith("4"): days = "дня"
+
 			if remains > 0:
 				Bot.send_message(
 					Message.chat.id,
-					text = f"Данные сохранены\\! Теперь будем ждать ваше событие *{name}* вместе\\! 😊", 
+					text = f"Данные сохранены\\!\n\nДо события *{name}* осталось {remains} {days}\\!", 
 					parse_mode = "MarkdownV2"
 					)
 			elif remains == 0:
 				Bot.send_message(
 					Message.chat.id,
-					text = f"Данные сохранены\\! Ваше событие *{name}* сегодня\\!\\!\\! 😊", 
+					text = f"Данные сохранены\\!\n\nВаше событие *{name}* сегодня\\!\\!\\! 😊", 
 					parse_mode = "MarkdownV2"
 					)
 			else: 
 				Bot.send_message(
 					Message.chat.id,
-					text = f"Данные сохранены\\! Ваше событие *{name}* уже произошло\\! 😊", 
+					text = f"Данные сохранены\\!\n\nВаше событие *{name}* произошло {abs(remains)} {days} назад\\! 🫣", 
 					parse_mode = "MarkdownV2"
 					)
 			User.clear_temp_properties()
@@ -172,7 +229,7 @@ def ProcessText(Message: types.Message):
 		User.set_temp_property("date", Name)
 		Bot.send_message(
 			Message.chat.id,
-			"А теперь мне нужна дата вашего события 🤔 \n\nПример\\: 01\\.01\\.2025", 
+			"А теперь мне нужна дата вашего события 🤔 \n\n_Пример_\\: 01\\.01\\.2025", 
 			parse_mode = "MarkdownV2")
 
 		User.set_expected_type("date")
@@ -192,6 +249,18 @@ def InlineButton(Call: types.CallbackQuery):
 	User.set_property("events", Events)
 	Bot.delete_message(Call.message.chat.id, Call.message.id)
 	
+	# Ответ на запрос.
+	Bot.answer_callback_query(Call.id)
+
+@Bot.callback_query_handler(func = lambda Callback: "create_event")
+def InlineButton(Call: types.CallbackQuery):
+	User = Manager.auth(Call.from_user)
+	Bot.send_message(
+		Call.message.chat.id, 
+		"Введите, пожалуйста, название события, которое вы так с нетерпением ждёте\\! 😉 \n\n_Например_\\: День рождения",
+			parse_mode = "MarkdownV2"
+		)
+	User.set_expected_type("name")
 	# Ответ на запрос.
 	Bot.answer_callback_query(Call.id)
 

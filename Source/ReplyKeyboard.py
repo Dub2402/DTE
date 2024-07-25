@@ -16,14 +16,15 @@ class ReplyKeyboard:
 		Строит кнопочный интерфейс: создание.
 			user – объектное представление пользователя.
 		"""
-
 		# Кнопочное меню.
 		Menu = types.ReplyKeyboardMarkup(resize_keyboard = True)
 		# Генерация кнопок.
-		Create = types.KeyboardButton("Новое событие")
-		List = types.KeyboardButton("Мои события")
-		Share = types.KeyboardButton("Поделиться с друзьями")
+		Create = types.KeyboardButton("➕ Новое событие")
+		List = types.KeyboardButton("🗓 Мои события")
+		Delete = types.KeyboardButton("🗑 Удалить событие")
+		Сhange = types.KeyboardButton("🔁 Изменить имя")
+		Share = types.KeyboardButton("📢 Поделиться с друзьями")
 		# Добавление кнопок в меню.
-		Menu.add(Create, List, Share, row_width = 1)
+		Menu.add(Create, List, Delete, Сhange, Share, row_width = 2)
 		
 		return Menu

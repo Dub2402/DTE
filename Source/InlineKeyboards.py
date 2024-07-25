@@ -38,3 +38,12 @@ class InlineKeyboards:
 		return Menu
 
 	
+	def AddNewEvent(self) -> types.InlineKeyboardMarkup:
+		Menu = types.InlineKeyboardMarkup()
+		Create = types.InlineKeyboardButton(
+			"Создать событие", 
+			callback_data = "create_event"
+			)
+		Menu.add(Create)
+
+		return Menu
