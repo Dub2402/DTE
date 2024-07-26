@@ -27,16 +27,6 @@ python main.py
 
 Сюда необходимо занести токен бота Telegram (можно получить у [BotFather](https://t.me/BotFather)).
 
-# Добавление команд 
-
-<a name="AddCommands"></a> 
-
-Можно указать в настройках бота в [BotFather](https://t.me/BotFather).
-
-create - Создание события
-
-list - просмотр событий
-
 ---
 
 _Copyright © Dub Irina. 2024._

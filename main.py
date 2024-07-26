@@ -126,9 +126,10 @@ def ProcessTextMyEvents(Message: types.Message):
 
 	else:
 		somedict = User.get_property("events").copy()
-		Bot.send_message(
+		DeleteMessage = Bot.send_message(
 					Message.chat.id,
 					f"Ваши события: ")
+		User.set_temp_property("ID_Message", DeleteMessage.id)
 		for EventID in somedict.keys():
 			name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
 			Bot.send_message(
@@ -144,7 +145,7 @@ def ProcessTextMyEvents(Message: types.Message):
 	User = Manager.auth(Message.from_user)
 	Bot.send_message(
 		Message.chat.id,
-		"Напишите свое новое имя! 😎")
+		"Напишите свое новое имя!")
 	User.set_expected_type("call")
 
 @Bot.message_handler(content_types = ["text"], regexp = "📢 Поделиться с друзьями")
@@ -166,7 +167,7 @@ def ProcessText(Message: types.Message):
 		call = Markdown(str(User.get_property("call"))).escaped_text
 		Bot.send_message(
 			Message.chat.id,
-			f"Приятно познакомиться, {call}!",
+			f"Приятно познакомиться, {call}! 😎",
 		reply_markup = ReplyKeyboardBox.AddMenu(User)
 		)
 		sleep(0.5)
@@ -248,6 +249,8 @@ def InlineButton(Call: types.CallbackQuery):
 
 	User.set_property("events", Events)
 	Bot.delete_message(Call.message.chat.id, Call.message.id)
+	if not User.get_property("events"):
+		Bot.delete_message(Call.message.chat.id, User.get_property("ID_Message"))
 	
 	# Ответ на запрос.
 	Bot.answer_callback_query(Call.id)
