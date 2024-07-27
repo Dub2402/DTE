@@ -1,0 +1,19 @@
+# Скрипт инициализации сервиса CalculateDateBot.
+#==========================================================================================#
+# {Application Directory} – путь к директории со скриптом.
+
+[Unit]
+Description=CalculateDateBot
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory={WorkingDirectory}
+ExecStart=/bin/bash -c "source .venv/bin/activate && python3 main.py"
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

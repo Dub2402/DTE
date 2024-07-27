@@ -16,14 +16,10 @@ def Calculator(event: str) -> int:
 
 def GetFreeID(Events: dict) -> int:
 	Increment = list()
-	for key in Events.keys():
-		Increment.append(key)
+	for key in Events.keys(): Increment.append(int(key))
 	Increment.sort()
-	if not Increment:
-		FreeID = 1
-	else: 
-		FreeID = Increment[-1]
-		FreeID = int(FreeID) + 1
+	FreeID = 1
+	if Increment: FreeID = max(Increment) + 1
 
 	return FreeID
 		
