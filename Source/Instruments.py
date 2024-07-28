@@ -7,6 +7,15 @@ def CheckValidDate(Date: str)-> bool:
 		return True
 	except:
 		return False
+	
+def Skinwalker(event: str) -> str:
+
+	yearnew = int(date.today().year) + 1 
+	day = dateparser.parse(event, settings={'DATE_ORDER': 'DMY'}).day
+	month = dateparser.parse(event, settings={'DATE_ORDER': 'DMY'}).month
+	newevent = str(day) + "." + str(month) + "." + str(yearnew)
+
+	return newevent
 
 def Calculator(event: str) -> int:
 	today = date.today()
@@ -22,4 +31,16 @@ def GetFreeID(Events: dict) -> int:
 	if Increment: FreeID = max(Increment) + 1
 
 	return FreeID
+
+
+def FormatDays(remains: int) -> str:
+	days = "дней"
+
+	if abs(remains) in [11, 12, 13]: pass
+	elif str(remains).endswith("1"): days = "день"
+	elif str(remains).endswith("2") or str(remains).endswith("3") or str(remains).endswith("4"): days = "дня"
+
+	return days
+	
 		
+ 
