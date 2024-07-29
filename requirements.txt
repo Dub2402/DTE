@@ -1,2 +1,3 @@
 dublib == 0.9.0
 pytelegrambotapi
+apscheduler

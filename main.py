@@ -1,12 +1,14 @@
 from Source.Instruments import Calculator, CheckValidDate, GetFreeID, Skinwalker, FormatDays
 from Source.InlineKeyboards import InlineKeyboards
 from Source.ReplyKeyboard import ReplyKeyboard
+from Source.Thread import Reminder
 
 from dublib.Methods.JSON import ReadJSON
 from dublib.Methods.System import CheckPythonMinimalVersion, Clear
 from dublib.Methods.Filesystem import MakeRootDirectories
 from dublib.TelebotUtils import UsersManager
 from dublib.Polyglot import Markdown
+from apscheduler.schedulers.background import BackgroundScheduler
 from telebot import types
 from time import sleep
 
@@ -23,9 +25,15 @@ Clear()
 Settings = ReadJSON("Settings.json")
 Bot = telebot.TeleBot(Settings["token"])
 
+r = Reminder(Bot)
+
 Manager = UsersManager("Data/Users")
 InlineKeyboardsBox = InlineKeyboards()
 ReplyKeyboardBox = ReplyKeyboard()
+scheduler = BackgroundScheduler()
+
+scheduler.add_job(r.start, 'cron', hour=23, minute='00')
+scheduler.start()
 
 @Bot.message_handler(commands=["start"])
 def ProcessCommandStart(Message: types.Message):
@@ -36,6 +44,7 @@ def ProcessCommandStart(Message: types.Message):
 		Message.chat.id, 
 		"🎉 Добро пожаловать! 🎉\n\nЯ бот, помогающий запоминать события и узнавать, сколько дней до них осталось."
 		)
+	User.set_temp_property("emoji", False)
 
 	try:
 		call = User.get_property("call")
@@ -109,7 +118,7 @@ def ProcessTextNewReminder(Message: types.Message):
 			Bot.send_message(
 				Message.chat.id,
 				f"*{name}*",
-				reply_markup = InlineKeyboardsBox.СhoiceEvent(EventID),
+				reply_markup = InlineKeyboardsBox.ChoiceEventToAddReminder(EventID),
 				parse_mode = "MarkdownV2")
 			sleep(0.2)
 
@@ -249,12 +258,12 @@ def ProcessDeleteReminder(Message: types.Message):
 @Bot.message_handler(content_types = ["text"], regexp = "🔁 Изменить имя")
 def ProcessChangeName(Message: types.Message):
 	User = Manager.auth(Message.from_user)
-
+	User.set_temp_property("emoji", True)
 	Bot.send_message(
 		Message.chat.id,
 		"Напишите свое новое имя!")
 	User.set_expected_type("call")
-
+	
 @Bot.message_handler(content_types = ["text"], regexp = "📢 Поделиться с друзьями")
 def ProcessShareWithFriends(Message: types.Message):
 	User = Manager.auth(Message.from_user)
@@ -274,12 +283,20 @@ def ProcessText(Message: types.Message):
 		User.set_expected_type(None)
 
 		call = Markdown(str(User.get_property("call"))).escaped_text
-		Bot.send_message(
-			Message.chat.id,
-			f"Приятно познакомиться, {call}! 😎",
-		reply_markup = ReplyKeyboardBox.AddMenu(User)
-		)
-		sleep(0.5)
+		if User.get_property("emoji"):
+			Bot.send_message(
+				Message.chat.id,
+				f"Приятно познакомиться, {call}! 😎",
+			reply_markup = ReplyKeyboardBox.AddMenu(User)
+			)
+		else: 
+			Bot.send_message(
+				Message.chat.id,
+				f"Приятно познакомиться, {call}!",
+			reply_markup = ReplyKeyboardBox.AddMenu(User)
+			)
+			User.clear_temp_properties()
+			sleep(0.5)
 
 		if not User.get_property("events"):
 			Bot.send_message(
@@ -306,7 +323,7 @@ def ProcessText(Message: types.Message):
 			if remains > 0:
 				Bot.send_message(
 					Message.chat.id,
-					text = f"Данные сохранены\\!\n\nДо события *{name}* осталось {remains} {days}\\!", 
+					text = f"Данные сохранены\\!\n\nДо события *{name}* осталось {remains} {days}\\!\n\nБудем ждать вместе\\! 💪", 
 					parse_mode = "MarkdownV2"
 					)
 				
@@ -345,7 +362,8 @@ def ProcessText(Message: types.Message):
 		return
 	
 	if User.expected_type == "reminder":
-		if Message.text.isdigit():
+		
+		if Message.text.isdigit() and int(Message.text) >= 1 and int(Message.text) <= 366:
 			Events: dict = User.get_property("events")
 			ReminderDict: dict = {"Reminder": Message.text}
 			Events[User.get_property("EventsID")].update(ReminderDict)
@@ -358,7 +376,7 @@ def ProcessText(Message: types.Message):
 		else:
 			Bot.send_message(
 				Message.chat.id,
-				"Неправильный формат. Введите целое число!!!")
+				"Я не совсем понял, что вы от меня хотите.")
 		return
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("remove_event"))
@@ -485,7 +503,7 @@ def InlineButtonRemainedDays(Call: types.CallbackQuery):
 
 	Bot.send_message(
 		Call.message.chat.id,
-		f"Данные сохранены\\!\n\nДо события *{name}* осталось {remains} {days}\\!", 
+		f"Данные сохранены\\!\n\nДо события *{name}* осталось {remains} {days}\\!\n\nБудем ждать вместе\\! 💪", 
 		parse_mode = "MarkdownV2"
 		)
 

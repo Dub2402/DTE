@@ -27,7 +27,7 @@ class InlineKeyboards:
 
 		# Генерация кнопок.
 		Choice = types.InlineKeyboardButton(
-			"🎯 Создать напоминание", 
+			"🔔 Создать напоминание", 
 			callback_data = f"choice_event_{EventID}"
 			)
 		
@@ -90,6 +90,6 @@ class InlineKeyboards:
 			)
 
 		# Добавление кнопок в меню.
-		Menu.add(Remained, Passed)
+		Menu.add(Remained, Passed, row_width = 1)
 		
 		return Menu

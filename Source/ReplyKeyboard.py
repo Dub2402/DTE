@@ -17,7 +17,7 @@ class ReplyKeyboard:
 		Share = types.KeyboardButton("📢 Поделиться с друзьями")
 
 		# Добавление кнопок в меню.
-		Menu.add(List, Reminders, Сhange, Share, row_width = 2)
+		Menu.add(Reminders, List, Сhange, Share, row_width = 2)
 		
 		return Menu
 
