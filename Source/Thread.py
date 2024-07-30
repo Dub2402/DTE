@@ -1,5 +1,5 @@
 import os
-from .Instruments import FormatDays
+from .Instruments import FormatDays, Skinwalker
 from dublib.Methods.JSON import ReadJSON
 from dublib.Methods.System import Clear
 from dublib.Polyglot import Markdown
@@ -9,7 +9,6 @@ from datetime import datetime, timedelta
 
 Clear()
 
-	
 class Reminder:
 
 	def __GetUsersID(self) -> list[int]:
@@ -47,37 +46,75 @@ class Reminder:
 		if CurrentDate == RemindDate.date(): return True
 
 		return False
+	
+	def __TodaySendReminder(self, event: dict)-> bool:
+		EventDate = dateparser.parse(event["Date"], settings={'DATE_ORDER': 'DMY'})
+		print(EventDate)
+		if "Date" in event.keys() and EventDate == datetime.now().date(): 
+			print(datetime.now().date())
+			return True
+		if "Format" in event.keys():
+			if event["Format"]  == "Passed": 
+				print("Passed")
+				return False
+
+			if event["Format"] == "Remained":
+				EventDate = dateparser.parse(Skinwalker(event["Date"]), settings={'DATE_ORDER': 'DMY'})
+				if EventDate == datetime.now().date(): 
+					print("Remained")
+					return True
+				else: return False
 
 	def __init__(self, bot: TeleBot):
 
 		self.__Bot = bot
 
-	def send(self, ID: int, name: str, event: dict):
+	def send(self, ID: int, name: str, event: dict, Today: bool):
 		Call = Markdown(name).escaped_text
 		Name = Markdown(str(event["Name"])).escaped_text
 		Reminder = Markdown(str(event["Reminder"])).escaped_text
 		days = FormatDays(int(event["Reminder"]))
-		self.__Bot.send_message(
-			ID, 
-			f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\n{Call}, приветствую\\!\nДо события *{Name}* осталось {Reminder} {days}\\!\n\nХорошего вам дня\\!",
-			parse_mode = "MarkdownV2"
-		)
+		if Today:
+			self.__Bot.send_message(
+				ID, 
+				f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\n{Call}, приветствую\\!\nСегодня ваше *{Name}*\\!\n\nХорошего вам дня\\!",
+				parse_mode = "MarkdownV2"
+			)
+		else:
+			self.__Bot.send_message(
+				ID, 
+				f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\n{Call}, приветствую\\!\nДо события *{Name}* осталось {Reminder} {days}\\!\n\nХорошего вам дня\\!",
+				parse_mode = "MarkdownV2"
+			)
 
 	def start(self):
 		UsersID = self.__GetUsersID()
 		
 		for ID in UsersID:
 			Data = ReadJSON(f"Data/Users/{ID}.json")
-			
-			for EventID in Data["data"]["events"].keys():
-				Event = Data["data"]["events"][EventID]
-				Name = Data["data"]["call"]
-				
 
-				if self.__CheckRemind(Event) and self.__CheckRemindDate(Event): self.send(ID, Name, Event)
-				else: print(Name, "Not today.")
+			if "events" in Data["data"].keys():
+				for EventID in Data["data"]["events"].keys():
+					Event = Data["data"]["events"][EventID]
+					Name = Data["data"]["call"]
+					
+					if self.__CheckRemind(Event) and self.__CheckRemindDate(Event): self.send(ID, Name, Event, False)
+					else: print(Name, "Not today.")
 
+	def startdefault(self):
+		UsersID = self.__GetUsersID()
+		
+		for ID in UsersID:
+			Data = ReadJSON(f"Data/Users/{ID}.json")
 
+			if "events" in Data["data"].keys():
+				for EventID in Data["data"]["events"].keys():
+					Event: dict = Data["data"]["events"][EventID]
+					Name = Data["data"]["call"]
+					
+					if self.__TodaySendReminder(Event): self.send(ID, Name, Event, True)
+					else: print(Name, "Not today.")
+		
 
 
 
@@ -124,23 +161,5 @@ class Reminder:
 	# 		except: pass
 
 					
-
-#             Data = ReadJSON(f"Data/Users/{File}.json")
-#         Data = ReadJSON("../Data/Users/1408847748.json")
-#         Call = Data["data"]["call"]
-#         for i in Data["data"]["events"].keys():
-#             Format = Data["data"]["events"][i]["Format"]
-
-#             if Format != "Passed":    
-#                 Name = Data["data"]["events"][i]["Name"]
-#                 Date = Data["data"]["events"][i]["Date"]
-#                 Format = Data["data"]["events"][i]["Format"]
-#                 Reminder = Data["data"]["events"][i]["Reminder"]
-		
-#         return Call, Name, Format, Date, Reminder
-# str
-# r = Reminder()
-# r.HandlerData()
-
 
 	
