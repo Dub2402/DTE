@@ -15,7 +15,7 @@ def Skinwalker(event: str) -> str:
 	month = dateparser.parse(event, settings={'DATE_ORDER': 'DMY'}).month
 	newevent = str(day) + "." + str(month) + "." + str(yearnew)
 	remains = Calculator(newevent)
-	if remains > 366 or remains > 365:
+	if remains > 364:
 		yearnew = int(date.today().year)
 		newevent = str(day) + "." + str(month) + "." + str(yearnew)
 

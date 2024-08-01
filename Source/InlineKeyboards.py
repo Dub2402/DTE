@@ -17,7 +17,7 @@ class InlineKeyboards:
 		DeleteReminder = types.InlineKeyboardButton("🗑 Удалить напоминание", callback_data = f"Delete_reminder")
 		Сhange = types.InlineKeyboardButton("🔁 Изменить имя", callback_data = f"Change")
 		# Добавление кнопок в меню.
-		Menu.add(DeleteEvent, CreateReminder, DeleteReminder, Сhange, row_width= 2) 
+		Menu.add(DeleteEvent, CreateReminder, DeleteReminder, Сhange, row_width= 1) 
 
 		return Menu
 
@@ -56,7 +56,7 @@ class InlineKeyboards:
 
 		Share = types.InlineKeyboardButton(
 			"Поделиться", 
-			switch_inline_query='\n\nЛучший бот для отсчитывания дней до праздника 🥳\nПользуйся на здоровье!)'
+			switch_inline_query='\n\nЛучший бот для отсчёта дней до события 🥳\nПользуйся на здоровье!)'
 			)
 		
 		Menu.add(Share)

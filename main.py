@@ -24,6 +24,9 @@ Clear()
 
 Settings = ReadJSON("Settings.json")
 Bot = telebot.TeleBot(Settings["token"])
+DefaultReminders = Settings["default_reminders"]
+UserReminders = Settings["user_reminders"]
+
 
 r = Reminder(Bot)
 
@@ -32,13 +35,14 @@ InlineKeyboardsBox = InlineKeyboards()
 ReplyKeyboardBox = ReplyKeyboard()
 scheduler = BackgroundScheduler()
 
-scheduler.add_job(r.start, 'cron', hour=23, minute='19')
-scheduler.add_job(r.startdefault, 'cron', hour=23, minute='46')
+scheduler.add_job(r.start, 'cron', hour = UserReminders["hour"], minute = UserReminders["minute"])
+scheduler.add_job(r.startdefault, 'cron', hour = DefaultReminders["hour"], minute=DefaultReminders["minute"])
 scheduler.start()
 
 @Bot.message_handler(commands=["start"])
 def ProcessCommandStart(Message: types.Message):
 	User = Manager.auth(Message.from_user)
+	User.set_expected_type(None)
 
 	User.set_property("events", {}, False)
 	Bot.send_message(
@@ -84,7 +88,7 @@ def ProcessTextReminders(Message: types.Message):
 	User = Manager.auth(Message.from_user)
 	Bot.send_message(
 		Message.chat.id, 
-		"Выберите пункт, который вы хотите настроить.", reply_markup= InlineKeyboardsBox.SettingsMenu(User))
+		"Выберите пункт, который вы хотите настроить:", reply_markup= InlineKeyboardsBox.SettingsMenu(User))
 	
 @Bot.message_handler(content_types = ["text"], regexp = "⬅ Назад")
 def ProcessTextReturn(Message: types.Message):
@@ -101,7 +105,7 @@ def ProcessTextNewEvent(Message: types.Message):
 
 	Bot.send_message(
 		Message.chat.id, 
-		"Введите, пожалуйста, название события, которое вы так с нетерпением ждёте\\! 😉 \n\n_Например_\\: День рождения",
+		"Введите, пожалуйста, название события, которое вы ждёте\\! 😉 \n\n",
 			parse_mode = "MarkdownV2"
 		)
 	User.set_expected_type("name")
@@ -155,12 +159,19 @@ def ProcessTextMyEvents(Message: types.Message):
 					newdate = Skinwalker(User.get_property("events")[EventID]["Date"])
 					remainsnew = Calculator(newdate)
 					days = FormatDays(remainsnew)
-					remainsnew = Markdown(str(remainsnew)).escaped_text
-					Bot.send_message(
-						Message.chat.id, 
-						f"До события *{name}* осталось {remainsnew} {days}\\!",
-						parse_mode = "MarkdownV2"
-					)
+					if remainsnew == 0:
+						Bot.send_message(
+							Message.chat.id,
+							f"Ваше событие *{name}* сегодня\\.",
+							parse_mode = "MarkdownV2"
+							)
+					else:
+						remainsnew = Markdown(str(remainsnew)).escaped_text
+						Bot.send_message(
+							Message.chat.id, 
+							f"До события *{name}* осталось {remainsnew} {days}\\!",
+							parse_mode = "MarkdownV2"
+						)
 			sleep(0.2)
 
 @Bot.message_handler(content_types = ["text"], regexp = "🔁 Изменить имя")
@@ -178,7 +189,7 @@ def ProcessShareWithFriends(Message: types.Message):
 
 	Bot.send_message(
 		Message.chat.id, 
-		text='@Prasdnikkk_bot\n\nЛучший бот для отсчитывания дней до праздника 🥳\nПользуйся на здоровье!)', 
+		text='@Dnido_bot\n\nЛучший бот для отсчёта дней до события 🥳\nПользуйся на здоровье!)', 
 		reply_markup=InlineKeyboardsBox.AddShare()
 		)
 
@@ -231,7 +242,7 @@ def ProcessText(Message: types.Message):
 			if remains > 0:
 				Bot.send_message(
 					Message.chat.id,
-					text = f"Данные сохранены\\!\n\nДо события *{name}* осталось {remains} {days}\\!\n\nБудем ждать вместе\\! 💪", 
+					text = f"Данные сохранены\\!\n\nДо события *{name}* осталось {remains} {days}\\!\n\nБудем ждать его вместе\\! 💪", 
 					parse_mode = "MarkdownV2"
 					)
 				
@@ -247,7 +258,7 @@ def ProcessText(Message: types.Message):
 					text ="Укажите, какой формат отсчёта вам показывать?",
 					reply_markup= InlineKeyboardsBox.ChoiceFormat(User, FreeID)
 				)
-			
+
 			User.clear_temp_properties()
 
 		else:
@@ -280,7 +291,7 @@ def ProcessText(Message: types.Message):
 
 			Bot.send_message(
 				Message.chat.id,
-				"Информация принята! Будем держать руку на пульсе 🫡")
+				"Информация принята!🫡 Будем держать руку на пульсе!")
 		else:
 			Bot.send_message(
 				Message.chat.id,
@@ -305,23 +316,19 @@ def InlineButtonRemoveEvent(Call: types.CallbackQuery):
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("remove_reminder"))
 def InlineButtonRemoveReminder(Call: types.CallbackQuery):
+	Delete = 0 
 	User = Manager.auth(Call.from_user)
-
+	
 	EventID = Call.data.split("_")[-1]
 	Events: dict = User.get_property("events")
-	Name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
 	del Events[EventID]["Reminder"]
 
 	User.set_property("events", Events)
-	
-	Bot.edit_message_text(
-		f"*{Name}*",
-		Call.message.chat.id,
-		User.get_property("ID_EditMessage"),
-		parse_mode = "MarkdownV2"
-	)
-	
-	if not User.get_property("events"):
+	Bot.delete_message(Call.message.chat.id, Call.message.id)
+	for EventID in User.get_property("events"):
+		if "Reminder" in User.get_property("events")[EventID].keys(): 
+			Delete += 1
+	if Delete == 0:
 		Bot.delete_message(Call.message.chat.id, User.get_property("ID_DelMessage"))
 		User.clear_temp_properties()
 
@@ -333,7 +340,7 @@ def InlineButtonCreateEvent(Call: types.CallbackQuery):
 
 	Bot.send_message(
 		Call.message.chat.id, 
-		"Введите, пожалуйста, название события, которое вы так с нетерпением ждёте\\! 😉 \n\n_Например_\\: День рождения",
+		"Введите, пожалуйста, название события, которое вы ждёте\\! 😉 \n\n_Например_\\: День рождения",
 		parse_mode = "MarkdownV2"
 	)
 	User.set_expected_type("name")
@@ -358,7 +365,7 @@ def InlineButtonChoiceEventToAddReminder(Call: types.CallbackQuery):
 
 		Bot.send_message(
 			Call.message.chat.id,
-			f"Укажите, за сколько дней вам напомнить о событии {Name}? 🔊\n\n_Пример_\\: 10",
+			f"Укажите, за сколько дней вам напомнить о событии *{Name}*? 🔊\n\n_Пример_\\: 10",
 			parse_mode = "MarkdownV2"
 		)
 		User.set_expected_type("reminder")
@@ -387,7 +394,7 @@ def InlineButtonPassedDays(Call: types.CallbackQuery):
 
 	Bot.send_message(
 		Call.message.chat.id,
-		text = f"Данные сохранены\\!\n\nВаше событие *{name}* произошло {abs(remains)} {days} назад\\! 🫣", 
+		text = f"Данные сохранены\\!\n\nВаше событие *{name}* произошло {abs(remains)} {days} назад\\!", 
 		parse_mode = "MarkdownV2"
 		)
 	
@@ -408,12 +415,18 @@ def InlineButtonRemainedDays(Call: types.CallbackQuery):
 	User.set_property("events", Event)
 
 	days = FormatDays(remains)
-
-	Bot.send_message(
-		Call.message.chat.id,
-		f"Данные сохранены\\!\n\nДо события *{name}* осталось {remains} {days}\\!\n\nБудем ждать вместе\\! 💪", 
-		parse_mode = "MarkdownV2"
-		)
+	if remains == 365:
+		Bot.send_message(
+				Call.message.chat.id,
+				text = f"Данные сохранены\\!\n\nВаше событие *{name}* сегодня\\!\\!\\! 😊", 
+				parse_mode = "MarkdownV2"
+				)
+	else:
+		Bot.send_message(
+			Call.message.chat.id,
+			f"Данные сохранены\\!\n\nДо события *{name}* осталось {remains} {days}\\!\n\nБудем ждать его вместе\\! 💪", 
+			parse_mode = "MarkdownV2"
+			)
 
 	Bot.answer_callback_query(Call.id)
 
@@ -474,7 +487,7 @@ def ProcessTextNewReminder(Call: types.CallbackQuery):
 	elif not User.get_property("events"):
 		Bot.send_message(
 			Call.message.chat.id, 
-			text= "Для создания напоминания сначала создайте событие! 🙌",
+			text= "Для создания напоминания сначала создайте событие!",
 			reply_markup = InlineKeyboardsBox.AddNewEvent()
 			)
 	else:
@@ -511,14 +524,13 @@ def ProcessDeleteReminder(Call: types.CallbackQuery):
 			if "Reminder" in somedict[EventID].keys():
 				Reminder = Markdown(User.get_property("events")[EventID]["Reminder"]).escaped_text
 
-				EditMessage = Bot.send_message(
+				Bot.send_message(
 					Call.message.chat.id,
 					f"*{Name}*\nНапоминание установлено за {Reminder} дней\\!",
 					reply_markup = InlineKeyboardsBox.RemoveReminder(EventID),
 					parse_mode = "MarkdownV2")
-				User.set_temp_property("ID_EditMessage", EditMessage.id)
-
 			sleep(0.2)
+
 	Bot.answer_callback_query(Call.id)
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Change"))
@@ -530,4 +542,6 @@ def ProcessChangeName(Call: types.CallbackQuery):
 		"Напишите свое новое имя!")
 	User.set_expected_type("call")
 
-Bot.polling(none_stop = True)
+	Bot.answer_callback_query(Call.id)
+
+Bot.infinity_polling()
