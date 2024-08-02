@@ -243,7 +243,7 @@ def ProcessText(Message: types.Message):
 				Bot.send_message(
 					Message.chat.id,
 					text = f"Данные сохранены\\!\n\nДо события *{name}* осталось {remains} {days}\\!\n\nБудем ждать его вместе\\! 💪", 
-					parse_mode = "MarkdownV2"
+					parse_mode = "MarkdownV2", reply_markup= InlineKeyboardsBox.ChoiceFormatReminder(User)
 					)
 				
 			elif remains == 0:
@@ -260,6 +260,7 @@ def ProcessText(Message: types.Message):
 				)
 
 			User.clear_temp_properties()
+			User.set_temp_property("EventsID", FreeID)
 
 		else:
 			Bot.send_message(
@@ -425,7 +426,7 @@ def InlineButtonRemainedDays(Call: types.CallbackQuery):
 		Bot.send_message(
 			Call.message.chat.id,
 			f"Данные сохранены\\!\n\nДо события *{name}* осталось {remains} {days}\\!\n\nБудем ждать его вместе\\! 💪", 
-			parse_mode = "MarkdownV2"
+			parse_mode = "MarkdownV2", reply_markup= InlineKeyboardsBox.ChoiceFormatReminder(User)
 			)
 
 	Bot.answer_callback_query(Call.id)
@@ -543,5 +544,46 @@ def ProcessChangeName(Call: types.CallbackQuery):
 	User.set_expected_type("call")
 
 	Bot.answer_callback_query(Call.id)
+
+@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("every_day_reminder"))
+def ProcessEveryDayReminders(Call: types.CallbackQuery):
+	User = Manager.auth(Call.from_user)
+
+	Events: dict = User.get_property("events")
+	ReminderDict: dict = {"ReminderFormat": "EveryDay"}
+
+	EventID = User.get_property("EventsID")
+	Events[EventID].update(ReminderDict)
+	User.set_property("events", Events)
+
+	name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
+	Bot.send_message(
+		Call.message.chat.id,
+		f"Ежедневные напоминания для события *{name}* активированы\\!",
+		parse_mode = "MarkdownV2"
+		)
+	
+	Bot.answer_callback_query(Call.id)
+
+@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("once_reminder"))
+def ProcessEveryDayReminders(Call: types.CallbackQuery):
+	User = Manager.auth(Call.from_user)
+
+	Events: dict = User.get_property("events")
+	ReminderDict: dict = {"ReminderFormat": "OnceDay"}
+
+	EventID = User.get_property("EventsID")
+	Events[EventID].update(ReminderDict)
+	User.set_property("events", Events)
+
+	name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
+	Bot.send_message(
+		Call.message.chat.id,
+		f"Ежедневные напоминания для события *{name}* активированы\\!",
+		parse_mode = "MarkdownV2"
+		)
+	
+	Bot.answer_callback_query(Call.id)
+
 
 Bot.infinity_polling()

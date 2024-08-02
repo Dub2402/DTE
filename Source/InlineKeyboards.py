@@ -108,3 +108,26 @@ class InlineKeyboards:
 		Menu.add(Remained, Passed, row_width = 1)
 		
 		return Menu
+	
+	def ChoiceFormatReminder(self, user: UserData) -> types.InlineKeyboardMarkup:
+		# Кнопочное меню.
+		Menu = types.InlineKeyboardMarkup()
+		
+		# Генерация кнопок.
+		EveryDayReminders = types.InlineKeyboardButton(
+			"Включить ежедневные напоминания", 
+			callback_data = "every_day_reminder"
+			)
+		OnceReminder = types.InlineKeyboardButton(
+			"Включить разовое напоминание", 
+			callback_data = "once_reminder"
+			)
+		WithOutReminders = types.InlineKeyboardButton(
+			"Без напоминаний", 
+			callback_data = "without_reminders"
+			)
+
+		# Добавление кнопок в меню.
+		Menu.add(EveryDayReminders, OnceReminder, WithOutReminders, row_width = 1)
+		
+		return Menu
