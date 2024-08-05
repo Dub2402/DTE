@@ -16,8 +16,9 @@ class InlineKeyboards:
 		CreateReminder = types.InlineKeyboardButton("➕ Создать напоминание", callback_data = f"Create_reminder")
 		DeleteReminder = types.InlineKeyboardButton("🗑 Удалить напоминание", callback_data = f"Delete_reminder")
 		Сhange = types.InlineKeyboardButton("🔁 Изменить имя", callback_data = f"Change")
+		Return = types.InlineKeyboardButton("🔙 Назад", callback_data = f"Return")
 		# Добавление кнопок в меню.
-		Menu.add(DeleteEvent, CreateReminder, DeleteReminder, Сhange, row_width= 1) 
+		Menu.add(DeleteEvent, CreateReminder, DeleteReminder, Сhange, Return, row_width= 1) 
 
 		return Menu
 
@@ -42,7 +43,7 @@ class InlineKeyboards:
 
 		# Генерация кнопок.
 		Choice = types.InlineKeyboardButton(
-			"🔔 Создать напоминание", 
+			"🔔 Создать напоминание для этого события", 
 			callback_data = f"choice_event_{EventID}"
 			)
 		

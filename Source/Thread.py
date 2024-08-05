@@ -1,5 +1,5 @@
 import os
-from .Instruments import FormatDays, Skinwalker
+from .Instruments import FormatDays, Calculator, Skinwalker
 from dublib.Methods.JSON import ReadJSON
 from dublib.Methods.System import Clear
 from dublib.Polyglot import Markdown
@@ -28,6 +28,10 @@ class Reminder:
 
 		return UsersID
 
+	def __CheckFormatRemained(self, event: dict) -> bool:
+		if "Format" in event.keys() and event["Format"] == "Passed": return False
+		return True
+	
 	def __CheckRemind(self, event: dict) -> bool:
 		if "Format" in event.keys() and event["Format"] == "Passed": return False
 		if not "Reminder" in event.keys(): return False
@@ -67,16 +71,46 @@ class Reminder:
 
 		self.__Bot = bot
 
-	def send(self, ID: int, name: str, event: dict, Today: bool):
-		Call = Markdown(name).escaped_text
+	def send(self, ID: int, Call: str, event: dict, Every: bool, Today: bool):
+		Call = Markdown(Call).escaped_text
 		Name = Markdown(str(event["Name"])).escaped_text
 		
-		if Today:
+		if Every:
+			remain = Calculator(event["Date"])
+			if remain > 0:
+				remain = Markdown(str(remain)).escaped_text
+				days = FormatDays(remain)
+				self.__Bot.send_message(
+				ID, 
+				f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\n{Call}, приветствую\\!\nДо события *{Name}* осталось {remain} {days}\\!\n\nХорошего вам дня\\!",
+				parse_mode = "MarkdownV2"
+				)
+				return
+			if remain == 0:
+				self.__Bot.send_message(
+					ID, 
+					f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\n{Call}, приветствую\\!\nСегодня ваше событие *{Name}*\\!\n\nХорошего вам дня\\!",
+					parse_mode = "MarkdownV2"
+				)
+				return
+			if remain < 0 and "Format" in event.keys():
+				if event["Format"] == "Remained":
+					skinwalker = Skinwalker(event["Date"])
+					remain = Calculator(skinwalker)
+					days = FormatDays(remain)
+					self.__Bot.send_message(
+						ID, 
+						f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\n{Call}, приветствую\\!\nДо события *{Name}* осталось {remain} {days}\\!\n\nХорошего вам дня\\!",
+						parse_mode = "MarkdownV2"
+						)
+
+		elif Today:
 			self.__Bot.send_message(
 				ID, 
 				f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\n{Call}, приветствую\\!\nСегодня ваше событие *{Name}*\\!\n\nХорошего вам дня\\!",
 				parse_mode = "MarkdownV2"
 			)
+
 		else:
 			Reminder = Markdown(str(event["Reminder"])).escaped_text
 			days = FormatDays(int(event["Reminder"]))
@@ -86,7 +120,7 @@ class Reminder:
 				parse_mode = "MarkdownV2"
 			)
 
-	def start(self):
+	def StartOnce(self):
 		UsersID = self.__GetUsersID()
 		
 		for ID in UsersID:
@@ -97,9 +131,9 @@ class Reminder:
 					Event = Data["data"]["events"][EventID]
 					Name = Data["data"]["call"]
 					
-					if self.__CheckRemind(Event) and self.__CheckRemindDate(Event): self.send(ID, Name, Event, False)
+					if self.__CheckRemind(Event) and self.__CheckRemindDate(Event): self.send(ID, Name, Event, Today=False, Every=False)
 
-	def startdefault(self):
+	def StartEvery(self):
 		UsersID = self.__GetUsersID()
 		
 		for ID in UsersID:
@@ -108,7 +142,19 @@ class Reminder:
 			if "events" in Data["data"].keys():
 				for EventID in Data["data"]["events"].keys():
 					Event: dict = Data["data"]["events"][EventID]
-					Name = Data["data"]["call"]
+					Call = Data["data"]["call"]
+					if "ReminderFormat" in Event.keys() and self.__CheckFormatRemained(Event):
+						print(50)
+						if Event["ReminderFormat"] =="EveryDay": self.send(ID, Call, Event, Every=True, Today= False)
+
+	def StartDefault(self):
+		UsersID = self.__GetUsersID()
+		for ID in UsersID:
+			Data = ReadJSON(f"Data/Users/{ID}.json")
+
+			if "events" in Data["data"].keys():
+				for EventID in Data["data"]["events"].keys():
+					Event: dict = Data["data"]["events"][EventID]
+					Call = Data["data"]["call"]
 					
-					if self.__CheckTodayRemind(Event) and self.__CheckTodayDate(Event): self.send(ID, Name, Event, True)
-		
+					if self.__CheckTodayRemind(Event) and self.__CheckTodayDate(Event): self.send(ID, Call, Event, Every=False, Today=True)

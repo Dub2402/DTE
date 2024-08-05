@@ -25,7 +25,8 @@ Clear()
 Settings = ReadJSON("Settings.json")
 Bot = telebot.TeleBot(Settings["token"])
 DefaultReminders = Settings["default_reminders"]
-UserReminders = Settings["user_reminders"]
+EveryReminders = Settings["every_reminders"]
+OnceReminders = Settings["once_reminders"]
 
 
 r = Reminder(Bot)
@@ -35,8 +36,9 @@ InlineKeyboardsBox = InlineKeyboards()
 ReplyKeyboardBox = ReplyKeyboard()
 scheduler = BackgroundScheduler()
 
-scheduler.add_job(r.start, 'cron', hour = UserReminders["hour"], minute = UserReminders["minute"])
-scheduler.add_job(r.startdefault, 'cron', hour = DefaultReminders["hour"], minute=DefaultReminders["minute"])
+scheduler.add_job(r.StartDefault, 'cron', hour = DefaultReminders["hour"], minute=DefaultReminders["minute"])
+scheduler.add_job(r.StartEvery, 'cron', hour = EveryReminders["hour"], minute = EveryReminders["minute"])
+scheduler.add_job(r.StartOnce, 'cron', hour = OnceReminders["hour"], minute=OnceReminders["minute"])
 scheduler.start()
 
 @Bot.message_handler(commands=["start"])
@@ -148,30 +150,39 @@ def ProcessTextMyEvents(Message: types.Message):
 					parse_mode = "MarkdownV2"
 				)
 			else:
-				if Events[EventID]["Format"] == "Passed":
+				if "Format" in Events[EventID]:
+					if Events[EventID]["Format"] == "Passed":
+						remains = Markdown(str(abs(remains))).escaped_text
+						Bot.send_message(
+							Message.chat.id, f"Событие *{name}* было {remains} {days} назад\\!",
+							parse_mode = "MarkdownV2"
+						)
+
+					if Events[EventID]["Format"] == "Remained":
+						newdate = Skinwalker(User.get_property("events")[EventID]["Date"])
+						remainsnew = Calculator(newdate)
+						days = FormatDays(remainsnew)
+						if remainsnew == 0:
+							Bot.send_message(
+								Message.chat.id,
+								f"Ваше событие *{name}* сегодня\\.",
+								parse_mode = "MarkdownV2"
+								)
+						else:
+							remainsnew = Markdown(str(remainsnew)).escaped_text
+							Bot.send_message(
+								Message.chat.id, 
+								f"До события *{name}* осталось {remainsnew} {days}\\!",
+								parse_mode = "MarkdownV2"
+						)
+				else:
 					remains = Markdown(str(abs(remains))).escaped_text
 					Bot.send_message(
 						Message.chat.id, f"Событие *{name}* было {remains} {days} назад\\!",
 						parse_mode = "MarkdownV2"
 					)
 
-				if Events[EventID]["Format"] == "Remained":
-					newdate = Skinwalker(User.get_property("events")[EventID]["Date"])
-					remainsnew = Calculator(newdate)
-					days = FormatDays(remainsnew)
-					if remainsnew == 0:
-						Bot.send_message(
-							Message.chat.id,
-							f"Ваше событие *{name}* сегодня\\.",
-							parse_mode = "MarkdownV2"
-							)
-					else:
-						remainsnew = Markdown(str(remainsnew)).escaped_text
-						Bot.send_message(
-							Message.chat.id, 
-							f"До события *{name}* осталось {remainsnew} {days}\\!",
-							parse_mode = "MarkdownV2"
-						)
+				
 			sleep(0.2)
 
 @Bot.message_handler(content_types = ["text"], regexp = "🔁 Изменить имя")
@@ -352,10 +363,10 @@ def InlineButtonCreateEvent(Call: types.CallbackQuery):
 def InlineButtonChoiceEventToAddReminder(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
 	CountReminders = 0
-
+	print(0)
 	Events = User.get_property("events").copy()
 	for EventID in Events.keys():
-		if "Reminder" in Events[EventID].keys():
+		if "ReminderFormat" in Events[EventID].keys():
 			CountReminders +=1
 
 	if CountReminders < 10:
@@ -367,7 +378,7 @@ def InlineButtonChoiceEventToAddReminder(Call: types.CallbackQuery):
 		Bot.send_message(
 			Call.message.chat.id,
 			f"Укажите, за сколько дней вам напомнить о событии *{Name}*? 🔊\n\n_Пример_\\: 10",
-			parse_mode = "MarkdownV2"
+			parse_mode = "MarkdownV2", reply_markup= InlineKeyboardsBox.ChoiceFormatReminder(User)
 		)
 		User.set_expected_type("reminder")
 
@@ -468,7 +479,7 @@ def ProcessTextNewReminder(Call: types.CallbackQuery):
 	Events = User.get_property("events")
 
 	for EventID in Events.keys():
-		if "Reminder" in Events[EventID].keys():
+		if "ReminderFormat" in Events[EventID].keys():
 			CountReminders +=1
 			
 	if CountReminders <10 and User.get_property("events"):
@@ -521,15 +532,28 @@ def ProcessDeleteReminder(Call: types.CallbackQuery):
 
 		for EventID in somedict.keys():
 			Name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
-
-			if "Reminder" in somedict[EventID].keys():
-				Reminder = Markdown(User.get_property("events")[EventID]["Reminder"]).escaped_text
-
-				Bot.send_message(
+		
+			if "ReminderFormat" in somedict[EventID].keys():
+				
+				if somedict[EventID]["ReminderFormat"] == "EveryDay":
+					
+					Bot.send_message(
 					Call.message.chat.id,
-					f"*{Name}*\nНапоминание установлено за {Reminder} дней\\!",
+					f"*{Name}*\nУстановлены ежедневные напоминания\\!",
 					reply_markup = InlineKeyboardsBox.RemoveReminder(EventID),
 					parse_mode = "MarkdownV2")
+					
+				if somedict[EventID]["ReminderFormat"] == "OnceDay":
+					if "Reminder" in somedict[EventID].keys():
+
+						Reminder = Markdown(User.get_property("events")[EventID]["Reminder"]).escaped_text
+
+						Bot.send_message(
+							Call.message.chat.id,
+							f"*{Name}*\nНапоминание установлено за {Reminder} дней\\!",
+							reply_markup = InlineKeyboardsBox.RemoveReminder(EventID),
+							parse_mode = "MarkdownV2")
+			
 			sleep(0.2)
 
 	Bot.answer_callback_query(Call.id)
@@ -566,7 +590,7 @@ def ProcessEveryDayReminders(Call: types.CallbackQuery):
 	Bot.answer_callback_query(Call.id)
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("once_reminder"))
-def ProcessEveryDayReminders(Call: types.CallbackQuery):
+def ProcessOnceDayReminders(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
 
 	Events: dict = User.get_property("events")
@@ -576,14 +600,62 @@ def ProcessEveryDayReminders(Call: types.CallbackQuery):
 	Events[EventID].update(ReminderDict)
 	User.set_property("events", Events)
 
-	name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
+	Name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
 	Bot.send_message(
 		Call.message.chat.id,
-		f"Ежедневные напоминания для события *{name}* активированы\\!",
-		parse_mode = "MarkdownV2"
+			f"Укажите, за сколько дней вам напомнить о событии *{Name}*? 🔊\n\n_Пример_\\: 10",
+			parse_mode = "MarkdownV2"
+		)
+	User.set_expected_type("reminder")
+	
+	Bot.answer_callback_query(Call.id)
+
+@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("without_reminders"))
+def ProcessWithoutReminders(Call: types.CallbackQuery):
+	User = Manager.auth(Call.from_user)
+
+	Events: dict = User.get_property("events")
+	ReminderDict: dict = {"ReminderFormat": "WithoutReminders"}
+
+	EventID = User.get_property("EventsID")
+	Events[EventID].update(ReminderDict)
+	User.set_property("events", Events)
+
+	Name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
+	Bot.send_message(
+		Call.message.chat.id,
+			f"Для события *{Name}* напоминания отключены\\!\n\nСколько осталось дней вы сможете помотреть по кнопке *Мои события* 🖲",
+			parse_mode = "MarkdownV2"
 		)
 	
 	Bot.answer_callback_query(Call.id)
 
+@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("once_reminder"))
+def ProcessOnceDayReminders(Call: types.CallbackQuery):
+	User = Manager.auth(Call.from_user)
+
+	Events: dict = User.get_property("events")
+	ReminderDict: dict = {"ReminderFormat": "OnceDay"}
+
+	EventID = User.get_property("EventsID")
+	Events[EventID].update(ReminderDict)
+	User.set_property("events", Events)
+
+	Name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
+	Bot.send_message(
+		Call.message.chat.id,
+			f"Укажите, за сколько дней вам напомнить о событии *{Name}*? 🔊\n\n_Пример_\\: 10",
+			parse_mode = "MarkdownV2"
+		)
+	User.set_expected_type("reminder")
+	
+	Bot.answer_callback_query(Call.id)
+
+@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Return"))
+def ProcessWithoutReminders(Call: types.CallbackQuery):
+	User = Manager.auth(Call.from_user)
+	Bot.delete_message(Call.message.chat.id, Call.message.id)
+	
+	Bot.answer_callback_query(Call.id)
 
 Bot.infinity_polling()

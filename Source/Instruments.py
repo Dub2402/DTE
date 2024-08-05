@@ -40,7 +40,7 @@ def GetFreeID(Events: dict) -> int:
 def FormatDays(remains: int) -> str:
 	days = "дней"
 
-	if abs(remains) in [11, 12, 13]: pass
+	if str(remains) in [11, 12, 13]: pass
 	elif str(remains).endswith("1"): days = "день"
 	elif str(remains).endswith("2") or str(remains).endswith("3") or str(remains).endswith("4"): days = "дня"
 
