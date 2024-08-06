@@ -67,39 +67,6 @@ def ProcessCommandStart(Message: types.Message):
 			"Давайте познакомимся!\nНапишите свое имя! 🤗"
 			)
 		User.set_expected_type("call")
-
-@Bot.message_handler(content_types = ["text"], regexp = "🗓️ Cобытия")
-def ProcessTextEvents(Message: types.Message):
-	User = Manager.auth(Message.from_user)
-
-	Bot.send_message(
-		Message.chat.id, 
-		"Панель управления событиями открыта", reply_markup = ReplyKeyboardBox.AddMenuEvents(User))
-	
-@Bot.message_handler(content_types = ["text"], regexp = "🔔 Напоминания")
-def ProcessTextReminders(Message: types.Message):
-	# Авторизация пользователя.
-	User = Manager.auth(Message.from_user)
-	Bot.send_message(
-		Message.chat.id, 
-		"Панель управления напоминаниями открыта", reply_markup= ReplyKeyboardBox.AddMenuReminders(User))
-
-@Bot.message_handler(content_types = ["text"], regexp = "⚙️ Настройки")
-def ProcessTextReminders(Message: types.Message):
-	# Авторизация пользователя.
-	User = Manager.auth(Message.from_user)
-	Bot.send_message(
-		Message.chat.id, 
-		"Выберите пункт, который вы хотите настроить:", reply_markup= InlineKeyboardsBox.SettingsMenu(User))
-	
-@Bot.message_handler(content_types = ["text"], regexp = "⬅ Назад")
-def ProcessTextReturn(Message: types.Message):
-	# Авторизация пользователя.
-	User = Manager.auth(Message.from_user)
-
-	Bot.send_message(
-		Message.chat.id, 
-		"Панель управления закрыта", reply_markup = ReplyKeyboardBox.AddMenu(User))
 	
 @Bot.message_handler(content_types = ["text"], regexp = "➕ Новое событие")
 def ProcessTextNewEvent(Message: types.Message):
