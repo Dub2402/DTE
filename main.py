@@ -68,6 +68,14 @@ def ProcessCommandStart(Message: types.Message):
 			)
 		User.set_expected_type("call")
 	
+@Bot.message_handler(content_types = ["text"], regexp = "⚙️ Настройки")
+def ProcessTextReminders(Message: types.Message):
+	# Авторизация пользователя.
+	User = Manager.auth(Message.from_user)
+	Bot.send_message(
+		Message.chat.id, 
+		"Выберите пункт, который вы хотите настроить:", reply_markup= InlineKeyboardsBox.SettingsMenu(User))
+		
 @Bot.message_handler(content_types = ["text"], regexp = "➕ Новое событие")
 def ProcessTextNewEvent(Message: types.Message):
 	User = Manager.auth(Message.from_user)
@@ -150,7 +158,7 @@ def ProcessTextMyEvents(Message: types.Message):
 					)
 
 				
-			sleep(0.2)
+			sleep(0.1)
 
 @Bot.message_handler(content_types = ["text"], regexp = "🔁 Изменить имя")
 def ProcessChangeName(Message: types.Message):
@@ -193,7 +201,7 @@ def ProcessText(Message: types.Message):
 			reply_markup = ReplyKeyboardBox.AddMenu(User)
 			)
 			User.clear_temp_properties()
-			sleep(0.5)
+			sleep(0.1)
 
 		if not User.get_property("events"):
 			Bot.send_message(
@@ -209,19 +217,20 @@ def ProcessText(Message: types.Message):
 		if CheckValidDate(Message.text) == True:
 			Events = User.get_property("events")
 			FreeID = str(GetFreeID(Events))
-			Events[FreeID] = {"Name": User.get_property("date"), "Date": Message.text}
+			Events[FreeID] = {"Name": User.get_property("date"), "Date": Message.text, "ReminderFormat": "EveryDay"}
 			User.set_expected_type(None)
 			User.set_property("events", Events)
 
 			remains = Calculator(User.get_property("events")[FreeID]["Date"])
 			name = Markdown(User.get_property("events")[FreeID]["Name"]).escaped_text
 			days = FormatDays(remains)
+			
 
 			if remains > 0:
 				Bot.send_message(
 					Message.chat.id,
 					text = f"Данные сохранены\\!\n\nДо события *{name}* осталось {remains} {days}\\!\n\nБудем ждать его вместе\\! 💪", 
-					parse_mode = "MarkdownV2", reply_markup= InlineKeyboardsBox.ChoiceFormatReminder(User)
+					parse_mode = "MarkdownV2"
 					)
 				
 			elif remains == 0:
@@ -300,13 +309,18 @@ def InlineButtonRemoveReminder(Call: types.CallbackQuery):
 	
 	EventID = Call.data.split("_")[-1]
 	Events: dict = User.get_property("events")
-	del Events[EventID]["Reminder"]
-
+	try:
+		del Events[EventID]["Reminder"]
+		del Events[EventID]["ReminderFormat"]
+	except:
+		del Events[EventID]["ReminderFormat"]
+	
 	User.set_property("events", Events)
 	Bot.delete_message(Call.message.chat.id, Call.message.id)
 	for EventID in User.get_property("events"):
-		if "Reminder" in User.get_property("events")[EventID].keys(): 
+		if "ReminderFormat" in User.get_property("events")[EventID].keys() and User.get_property("events")[EventID]["ReminderFormat"] != "WithoutReminders": 
 			Delete += 1
+
 	if Delete == 0:
 		Bot.delete_message(Call.message.chat.id, User.get_property("ID_DelMessage"))
 		User.clear_temp_properties()
@@ -344,8 +358,8 @@ def InlineButtonChoiceEventToAddReminder(Call: types.CallbackQuery):
 
 		Bot.send_message(
 			Call.message.chat.id,
-			f"Укажите, за сколько дней вам напомнить о событии *{Name}*? 🔊\n\n_Пример_\\: 10",
-			parse_mode = "MarkdownV2", reply_markup= InlineKeyboardsBox.ChoiceFormatReminder(User)
+			f"Выберите тип напоминания:",
+			reply_markup= InlineKeyboardsBox.ChoiceFormatReminder(User)
 		)
 		User.set_expected_type("reminder")
 
@@ -404,7 +418,7 @@ def InlineButtonRemainedDays(Call: types.CallbackQuery):
 		Bot.send_message(
 			Call.message.chat.id,
 			f"Данные сохранены\\!\n\nДо события *{name}* осталось {remains} {days}\\!\n\nБудем ждать его вместе\\! 💪", 
-			parse_mode = "MarkdownV2", reply_markup= InlineKeyboardsBox.ChoiceFormatReminder(User)
+			parse_mode = "MarkdownV2"
 			)
 
 	Bot.answer_callback_query(Call.id)
@@ -435,7 +449,7 @@ def ProcessDeleteEvent(Call: types.CallbackQuery):
 				f"*{name}*",
 				reply_markup = InlineKeyboardsBox.RemoveEvent(EventID),
 				parse_mode = "MarkdownV2")
-			sleep(0.2)
+			sleep(0.1)
 	Bot.answer_callback_query(Call.id)
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Create_reminder"))
@@ -461,7 +475,7 @@ def ProcessTextNewReminder(Call: types.CallbackQuery):
 				f"*{name}*",
 				reply_markup = InlineKeyboardsBox.ChoiceEventToAddReminder(EventID),
 				parse_mode = "MarkdownV2")
-			sleep(0.2)
+			sleep(0.1)
 
 	elif not User.get_property("events"):
 		Bot.send_message(
@@ -483,7 +497,7 @@ def ProcessDeleteReminder(Call: types.CallbackQuery):
 	somedict = User.get_property("events").copy()
 
 	for EventID in somedict.keys():
-		if "Reminder" in User.get_property("events")[EventID].keys():
+		if "ReminderFormat" in User.get_property("events")[EventID].keys() and User.get_property("events")[EventID]["ReminderFormat"] != "WithoutReminders":
 			CountReminder += 1
 	
 	if CountReminder < 1:
@@ -521,7 +535,7 @@ def ProcessDeleteReminder(Call: types.CallbackQuery):
 							reply_markup = InlineKeyboardsBox.RemoveReminder(EventID),
 							parse_mode = "MarkdownV2")
 			
-			sleep(0.2)
+			sleep(0.1)
 
 	Bot.answer_callback_query(Call.id)
 

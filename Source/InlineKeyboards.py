@@ -6,7 +6,6 @@ class InlineKeyboards:
 	def __init__(self):
 		pass
 
-
 	def SettingsMenu(self, EventID: int) -> types.InlineKeyboardMarkup:
 		# Кнопочное меню.
 		Menu = types.InlineKeyboardMarkup()
@@ -18,7 +17,7 @@ class InlineKeyboards:
 		Сhange = types.InlineKeyboardButton("🔁 Изменить имя", callback_data = f"Change")
 		Return = types.InlineKeyboardButton("🔙 Назад", callback_data = f"Return")
 		# Добавление кнопок в меню.
-		Menu.add(DeleteEvent, CreateReminder, DeleteReminder, Сhange, Return, row_width= 1) 
+		Menu.add(DeleteEvent, DeleteReminder, CreateReminder, Сhange, Return, row_width= 1) 
 
 		return Menu
 
@@ -43,7 +42,7 @@ class InlineKeyboards:
 
 		# Генерация кнопок.
 		Choice = types.InlineKeyboardButton(
-			"🔔 Создать напоминание для этого события", 
+			"🔔 Создать напоминание", 
 			callback_data = f"choice_event_{EventID}"
 			)
 		

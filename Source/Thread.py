@@ -82,15 +82,8 @@ class Reminder:
 				days = FormatDays(remain)
 				self.__Bot.send_message(
 				ID, 
-				f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\n{Call}, приветствую\\!\nДо события *{Name}* осталось {remain} {days}\\!\n\nХорошего вам дня\\!",
+				f"До события *{Name}* осталось {remain} {days}\\!",
 				parse_mode = "MarkdownV2"
-				)
-				return
-			if remain == 0:
-				self.__Bot.send_message(
-					ID, 
-					f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\n{Call}, приветствую\\!\nСегодня ваше событие *{Name}*\\!\n\nХорошего вам дня\\!",
-					parse_mode = "MarkdownV2"
 				)
 				return
 			if remain < 0 and "Format" in event.keys():
@@ -100,7 +93,7 @@ class Reminder:
 					days = FormatDays(remain)
 					self.__Bot.send_message(
 						ID, 
-						f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\n{Call}, приветствую\\!\nДо события *{Name}* осталось {remain} {days}\\!\n\nХорошего вам дня\\!",
+						f"До события *{Name}* осталось {remain} {days}\\!",
 						parse_mode = "MarkdownV2"
 						)
 
@@ -144,8 +137,7 @@ class Reminder:
 					Event: dict = Data["data"]["events"][EventID]
 					Call = Data["data"]["call"]
 					if "ReminderFormat" in Event.keys() and self.__CheckFormatRemained(Event):
-						print(50)
-						if Event["ReminderFormat"] =="EveryDay": self.send(ID, Call, Event, Every=True, Today= False)
+						if not self.__CheckTodayDate(Event) and Event["ReminderFormat"] == "EveryDay": self.send(ID, Call, Event, Every=True, Today= False)
 
 	def StartDefault(self):
 		UsersID = self.__GetUsersID()
