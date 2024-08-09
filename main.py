@@ -8,11 +8,16 @@ from dublib.Methods.System import CheckPythonMinimalVersion, Clear
 from dublib.Methods.Filesystem import MakeRootDirectories
 from dublib.TelebotUtils import UsersManager
 from dublib.Polyglot import Markdown
-from apscheduler.schedulers.background import BackgroundScheduler
 from telebot import types
 from time import sleep
+from apscheduler.schedulers.background import BackgroundScheduler
 
 import telebot
+import logging
+
+logging.basicConfig(level=logging.INFO, encoding="utf-8", filename="LOGING.log", filemode="w",
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S')
 
 # Проверка поддержки используемой версии Python.
 CheckPythonMinimalVersion(3, 10)
@@ -28,7 +33,6 @@ DefaultReminders = Settings["default_reminders"]
 EveryReminders = Settings["every_reminders"]
 OnceReminders = Settings["once_reminders"]
 
-
 r = Reminder(Bot)
 
 Manager = UsersManager("Data/Users")
@@ -40,6 +44,7 @@ scheduler.add_job(r.StartDefault, 'cron', hour = DefaultReminders["hour"], minut
 scheduler.add_job(r.StartEvery, 'cron', hour = EveryReminders["hour"], minute = EveryReminders["minute"])
 scheduler.add_job(r.StartOnce, 'cron', hour = OnceReminders["hour"], minute=OnceReminders["minute"])
 scheduler.start()
+
 
 @Bot.message_handler(commands=["start"])
 def ProcessCommandStart(Message: types.Message):
@@ -344,7 +349,6 @@ def InlineButtonCreateEvent(Call: types.CallbackQuery):
 def InlineButtonChoiceEventToAddReminder(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
 	CountReminders = 0
-	print(0)
 	Events = User.get_property("events").copy()
 	for EventID in Events.keys():
 		if "ReminderFormat" in Events[EventID].keys():

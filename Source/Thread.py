@@ -1,12 +1,14 @@
-import os
 from .Instruments import FormatDays, Calculator, Skinwalker
+
+import os
+import dateparser
 from dublib.Methods.JSON import ReadJSON
 from dublib.Methods.System import Clear
 from dublib.Polyglot import Markdown
 from telebot import TeleBot
-import dateparser
 from datetime import datetime, timedelta
 
+import logging
 Clear()
 
 class Reminder:
@@ -114,39 +116,53 @@ class Reminder:
 			)
 
 	def StartOnce(self):
-		UsersID = self.__GetUsersID()
-		
-		for ID in UsersID:
-			Data = ReadJSON(f"Data/Users/{ID}.json")
+		logging.info("Разовые напоминания.")
+		try:
+			UsersID = self.__GetUsersID()
+			
+			for ID in UsersID:
+				Data = ReadJSON(f"Data/Users/{ID}.json")
 
-			if "events" in Data["data"].keys():
-				for EventID in Data["data"]["events"].keys():
-					Event = Data["data"]["events"][EventID]
-					Name = Data["data"]["call"]
-					
-					if self.__CheckRemind(Event) and self.__CheckRemindDate(Event): self.send(ID, Name, Event, Today=False, Every=False)
+				if "events" in Data["data"].keys():
+					for EventID in Data["data"]["events"].keys():
+						Event = Data["data"]["events"][EventID]
+						Name = Data["data"]["call"]
+						
+						if self.__CheckRemind(Event) and self.__CheckRemindDate(Event):
+							self.send(ID, Name, Event, Today=False, Every=False)
+		except Exception as ExceptionData: logging.error(str(ExceptionData))
 
 	def StartEvery(self):
-		UsersID = self.__GetUsersID()
+		logging.info("Ежедневные напоминания.")
 		
-		for ID in UsersID:
-			Data = ReadJSON(f"Data/Users/{ID}.json")
+		try:
+			UsersID = self.__GetUsersID()
+			for ID in UsersID:
+				Data = ReadJSON(f"Data/Users/{ID}.json")
 
-			if "events" in Data["data"].keys():
-				for EventID in Data["data"]["events"].keys():
-					Event: dict = Data["data"]["events"][EventID]
-					Call = Data["data"]["call"]
-					if "ReminderFormat" in Event.keys() and self.__CheckFormatRemained(Event):
-						if not self.__CheckTodayDate(Event) and Event["ReminderFormat"] == "EveryDay": self.send(ID, Call, Event, Every=True, Today= False)
+				if "events" in Data["data"].keys():
+					for EventID in Data["data"]["events"].keys():
+						Event: dict = Data["data"]["events"][EventID]
+						Call = Data["data"]["call"]
+						if "ReminderFormat" in Event.keys() and self.__CheckFormatRemained(Event):
+							if not self.__CheckTodayDate(Event) and Event["ReminderFormat"] == "EveryDay":
+								self.send(ID, Call, Event, Every=True, Today= False)
 
+		except Exception as ExceptionData: logging.error(str(ExceptionData))
+		
 	def StartDefault(self):
-		UsersID = self.__GetUsersID()
-		for ID in UsersID:
-			Data = ReadJSON(f"Data/Users/{ID}.json")
+		logging.info("Напоминания по умолчанию.")
+		try:
+			UsersID = self.__GetUsersID()
+			for ID in UsersID:
+				Data = ReadJSON(f"Data/Users/{ID}.json")
 
-			if "events" in Data["data"].keys():
-				for EventID in Data["data"]["events"].keys():
-					Event: dict = Data["data"]["events"][EventID]
-					Call = Data["data"]["call"]
-					
-					if self.__CheckTodayRemind(Event) and self.__CheckTodayDate(Event): self.send(ID, Call, Event, Every=False, Today=True)
+				if "events" in Data["data"].keys():
+					for EventID in Data["data"]["events"].keys():
+						Event: dict = Data["data"]["events"][EventID]
+						Call = Data["data"]["call"]
+						
+						if self.__CheckTodayRemind(Event) and self.__CheckTodayDate(Event):
+							self.send(ID, Call, Event, Every=False, Today=True)
+							
+		except Exception as ExceptionData: logging.error(str(ExceptionData))
