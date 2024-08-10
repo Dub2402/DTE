@@ -1,3 +1,7 @@
+#==========================================================================================#
+# >>>>> ПОДКЛЮЧЕНИЕ БИБЛИОТЕК И МОДУЛЕЙ <<<<< #
+#==========================================================================================#
+
 from Source.Instruments import Calculator, CheckValidDate, GetFreeID, Skinwalker, FormatDays
 from Source.InlineKeyboards import InlineKeyboards
 from Source.ReplyKeyboard import ReplyKeyboard
@@ -11,40 +15,58 @@ from dublib.Polyglot import Markdown
 from telebot import types
 from time import sleep
 from apscheduler.schedulers.background import BackgroundScheduler
-
 import telebot
 import logging
+
+#==========================================================================================#
+# >>>>> ЛОГГИРОВАНИЕ <<<<< #
+#==========================================================================================#
 
 logging.basicConfig(level=logging.INFO, encoding="utf-8", filename="LOGING.log", filemode="w",
     format='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S')
 
-# Проверка поддержки используемой версии Python.
-CheckPythonMinimalVersion(3, 10)
+#==========================================================================================#
+# >>>>> СИСТЕМНЫЕ НАСТРОЙКИ <<<<< #
+#==========================================================================================#
 
-# Создание папок в корневой директории.
+CheckPythonMinimalVersion(3, 10)
 MakeRootDirectories(["Data/Users"])
-# Очистка консоли.
 Clear()
+
+#==========================================================================================#
+# >>>>> НАСТРОЙКИ БОТА <<<<< #
+#==========================================================================================#
 
 Settings = ReadJSON("Settings.json")
 Bot = telebot.TeleBot(Settings["token"])
-DefaultReminders = Settings["default_reminders"]
-EveryReminders = Settings["every_reminders"]
-OnceReminders = Settings["once_reminders"]
 
-r = Reminder(Bot)
+#==========================================================================================#
+# >>>>> СОЗДАНИЕ ОБЪЕКТОВ КЛАССОВ <<<<< #
+#==========================================================================================#
 
 Manager = UsersManager("Data/Users")
 InlineKeyboardsBox = InlineKeyboards()
 ReplyKeyboardBox = ReplyKeyboard()
 scheduler = BackgroundScheduler()
+reminder = Reminder(Bot)
 
-scheduler.add_job(r.StartDefault, 'cron', hour = DefaultReminders["hour"], minute=DefaultReminders["minute"])
-scheduler.add_job(r.StartEvery, 'cron', hour = EveryReminders["hour"], minute = EveryReminders["minute"])
-scheduler.add_job(r.StartOnce, 'cron', hour = OnceReminders["hour"], minute=OnceReminders["minute"])
+#==========================================================================================#
+# >>>>> НАСТРОЙКИ APSHEDULER <<<<< #
+#==========================================================================================#
+
+DefaultReminders = Settings["default_reminders"]
+EveryReminders = Settings["every_reminders"]
+OnceReminders = Settings["once_reminders"]
+
+#==========================================================================================#
+# >>>>> ДОБАВЛЕНИЕ ЗАДАНИЙ В APSHEDULER <<<<< #
+#==========================================================================================#
+
+scheduler.add_job(reminder.StartDefault, 'cron', hour = DefaultReminders["hour"], minute=DefaultReminders["minute"])
+scheduler.add_job(reminder.StartEvery, 'cron', hour = EveryReminders["hour"], minute = EveryReminders["minute"])
+scheduler.add_job(reminder.StartOnce, 'cron', hour = OnceReminders["hour"], minute=OnceReminders["minute"])
 scheduler.start()
-
 
 @Bot.message_handler(commands=["start"])
 def ProcessCommandStart(Message: types.Message):
@@ -164,15 +186,6 @@ def ProcessTextMyEvents(Message: types.Message):
 
 				
 			sleep(0.1)
-
-@Bot.message_handler(content_types = ["text"], regexp = "🔁 Изменить имя")
-def ProcessChangeName(Message: types.Message):
-	User = Manager.auth(Message.from_user)
-	User.set_temp_property("emoji", True)
-	Bot.send_message(
-		Message.chat.id,
-		"Напишите свое новое имя!")
-	User.set_expected_type("call")
 	
 @Bot.message_handler(content_types = ["text"], regexp = "📢 Поделиться с друзьями")
 def ProcessShareWithFriends(Message: types.Message):
@@ -460,26 +473,31 @@ def ProcessDeleteEvent(Call: types.CallbackQuery):
 def ProcessTextNewReminder(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
 
-	CountReminders = 0
 	Events = User.get_property("events")
-
-	for EventID in Events.keys():
-		if "ReminderFormat" in Events[EventID].keys():
-			CountReminders +=1
 			
-	if CountReminders <10 and User.get_property("events"):
+	if User.get_property("events"):
+
 		Bot.send_message(
 			Call.message.chat.id, 
 			"Выберите событие, для которого вы хотите создать напоминание:")
 		
 		for EventID in Events.keys():
 			name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
-			Bot.send_message(
-				Call.message.chat.id,
-				f"*{name}*",
-				reply_markup = InlineKeyboardsBox.ChoiceEventToAddReminder(EventID),
-				parse_mode = "MarkdownV2")
-			sleep(0.1)
+			if "ReminderFormat" in Events[EventID].keys():
+				Bot.send_message(
+					Call.message.chat.id,
+					f"*{name}*",
+					reply_markup = InlineKeyboardsBox.ChoiceEventToChangeReminder(EventID),
+					parse_mode = "MarkdownV2")
+				sleep(0.1)
+
+			else:	
+				Bot.send_message(
+					Call.message.chat.id,
+					f"*{name}*",
+					reply_markup = InlineKeyboardsBox.ChoiceEventToAddReminder(EventID),
+					parse_mode = "MarkdownV2")
+				sleep(0.1)
 
 	elif not User.get_property("events"):
 		Bot.send_message(
@@ -487,10 +505,7 @@ def ProcessTextNewReminder(Call: types.CallbackQuery):
 			text= "Для создания напоминания сначала создайте событие!",
 			reply_markup = InlineKeyboardsBox.AddNewEvent()
 			)
-	else:
-		Bot.send_message(
-			Call.message.chat.id, 
-			"Превышен лимит напоминаний (>10).\nУдалите ненужные напоминания, для создания нового напоминания.")
+		
 	Bot.answer_callback_query(Call.id)
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Delete_reminder"))
@@ -612,27 +627,6 @@ def ProcessWithoutReminders(Call: types.CallbackQuery):
 			f"Для события *{Name}* напоминания отключены\\!\n\nСколько осталось дней вы сможете помотреть по кнопке *Мои события* 🖲",
 			parse_mode = "MarkdownV2"
 		)
-	
-	Bot.answer_callback_query(Call.id)
-
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("once_reminder"))
-def ProcessOnceDayReminders(Call: types.CallbackQuery):
-	User = Manager.auth(Call.from_user)
-
-	Events: dict = User.get_property("events")
-	ReminderDict: dict = {"ReminderFormat": "OnceDay"}
-
-	EventID = User.get_property("EventsID")
-	Events[EventID].update(ReminderDict)
-	User.set_property("events", Events)
-
-	Name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
-	Bot.send_message(
-		Call.message.chat.id,
-			f"Укажите, за сколько дней вам напомнить о событии *{Name}*? 🔊\n\n_Пример_\\: 10",
-			parse_mode = "MarkdownV2"
-		)
-	User.set_expected_type("reminder")
 	
 	Bot.answer_callback_query(Call.id)
 

@@ -1,9 +1,9 @@
 # CalculatorDateBot 
-**CalculatorDateBot** – [telegram](https://telegram.org)-бот, помогающий запоминать события и указывать сколько дней до них осталось.
+**CalculatorDateBot** – [telegram](https://telegram.org)-бот, помогающий запоминать события и узнавать сколько дней до них осталось.
 
 # Порядок установки и использования
 1. Загрузить репозиторий. Распаковать.
-2. Установить [Python](https://www.python.org/downloads/) версии 3.11 и выше. Рекомендуется добавить в PATH.
+2. Установить [Python](https://www.python.org/downloads/) версии 3.10 и выше. Рекомендуется добавить в PATH.
 3. Установить пакеты при помощи следующей команды, выполненной из директории скрипта.
 
 ```
@@ -21,7 +21,10 @@ python main.py
 <a name="Settings"></a> 
 
 ```JSON
-"token": ""
+"token": "",
+"default_reminders": {"hour": None, "minute": ""},
+"every_reminders": {"hour": None, "minute": ""},
+"once_reminders": {"hour": None, "minute": ""}
 ```
 
 Сюда необходимо занести токен бота Telegram (можно получить у [BotFather](https://t.me/BotFather)).

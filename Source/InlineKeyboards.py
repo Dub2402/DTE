@@ -50,6 +50,21 @@ class InlineKeyboards:
 		Menu.add(Choice)
 
 		return Menu
+
+	def ChoiceEventToChangeReminder(self, EventID: int) -> types.InlineKeyboardMarkup:
+		# Кнопочное меню.
+		Menu = types.InlineKeyboardMarkup()
+
+		# Генерация кнопок.
+		Choice = types.InlineKeyboardButton(
+			"🔔 Изменить напоминание", 
+			callback_data = f"choice_event_{EventID}"
+			)
+		
+		# Добавление кнопок в меню.
+		Menu.add(Choice)
+
+		return Menu
 	
 	def AddShare(self) -> types.InlineKeyboardMarkup:
 		Menu = types.InlineKeyboardMarkup()

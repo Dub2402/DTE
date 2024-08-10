@@ -116,7 +116,6 @@ class Reminder:
 			)
 
 	def StartOnce(self):
-		logging.info("Разовые напоминания.")
 		try:
 			UsersID = self.__GetUsersID()
 			
@@ -129,12 +128,13 @@ class Reminder:
 						Name = Data["data"]["call"]
 						
 						if self.__CheckRemind(Event) and self.__CheckRemindDate(Event):
-							self.send(ID, Name, Event, Today=False, Every=False)
+							try:
+								self.send(ID, Name, Event, Today=False, Every=False)
+							except Exception as ExceptionData: pass
+							
 		except Exception as ExceptionData: logging.error(str(ExceptionData))
 
 	def StartEvery(self):
-		logging.info("Ежедневные напоминания.")
-		
 		try:
 			UsersID = self.__GetUsersID()
 			for ID in UsersID:
@@ -146,12 +146,13 @@ class Reminder:
 						Call = Data["data"]["call"]
 						if "ReminderFormat" in Event.keys() and self.__CheckFormatRemained(Event):
 							if not self.__CheckTodayDate(Event) and Event["ReminderFormat"] == "EveryDay":
-								self.send(ID, Call, Event, Every=True, Today= False)
+								try:
+									self.send(ID, Call, Event, Every=True, Today= False)
+								except Exception as ExceptionData: pass
 
 		except Exception as ExceptionData: logging.error(str(ExceptionData))
 		
 	def StartDefault(self):
-		logging.info("Напоминания по умолчанию.")
 		try:
 			UsersID = self.__GetUsersID()
 			for ID in UsersID:
@@ -163,6 +164,8 @@ class Reminder:
 						Call = Data["data"]["call"]
 						
 						if self.__CheckTodayRemind(Event) and self.__CheckTodayDate(Event):
-							self.send(ID, Call, Event, Every=False, Today=True)
+							try:
+								self.send(ID, Call, Event, Every=False, Today=True)
+							except Exception as ExceptionData: pass
 							
 		except Exception as ExceptionData: logging.error(str(ExceptionData))
