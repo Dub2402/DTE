@@ -1,6 +1,8 @@
 {
 	"token": "",
-	"default_reminders": {"hour": 12, "minute": "58"},
-	"every_reminders": {"hour": 12, "minute": "58"},
-	"once_reminders": {"hour": 12, "minute": "58"}
+	"password": "",
+	"default_reminders": {"hour": null, "minute": ""},
+	"every_reminders": {"hour": null, "minute": ""},
+	"once_reminders": {"hour": null, "minute": ""}
 }
+

@@ -22,9 +22,10 @@ python main.py
 
 ```JSON
 "token": "",
-"default_reminders": {"hour": None, "minute": ""},
-"every_reminders": {"hour": None, "minute": ""},
-"once_reminders": {"hour": None, "minute": ""}
+"password": "",
+"default_reminders": {"hour": null, "minute": ""},
+"every_reminders": {"hour": null, "minute": ""},
+"once_reminders": {"hour": null, "minute": ""}
 ```
 
 Сюда необходимо занести токен бота Telegram (можно получить у [BotFather](https://t.me/BotFather)).

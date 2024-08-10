@@ -6,6 +6,14 @@ from Source.Instruments import Calculator, CheckValidDate, GetFreeID, Skinwalker
 from Source.InlineKeyboards import InlineKeyboards
 from Source.ReplyKeyboard import ReplyKeyboard
 from Source.Thread import Reminder
+from Source.Admin.Panel import (
+	InitializeCommands,
+	InitializeFiles,
+	InitializeInlineKeyboard,
+	InitializePhoto,
+	InitializeReplyKeyboard,
+	InitializeText
+)
 
 from dublib.Methods.JSON import ReadJSON
 from dublib.Methods.System import CheckPythonMinimalVersion, Clear
@@ -68,6 +76,13 @@ scheduler.add_job(reminder.StartEvery, 'cron', hour = EveryReminders["hour"], mi
 scheduler.add_job(reminder.StartOnce, 'cron', hour = OnceReminders["hour"], minute=OnceReminders["minute"])
 scheduler.start()
 
+#==========================================================================================#
+# >>>>> ПАНЕЛЬ АДМИНИСТИРОВАНИЯ <<<<< #
+#==========================================================================================#
+Users = UsersManager("Data/Users")
+
+InitializeCommands(Bot, Settings["password"], Users)
+
 @Bot.message_handler(commands=["start"])
 def ProcessCommandStart(Message: types.Message):
 	User = Manager.auth(Message.from_user)
@@ -95,6 +110,8 @@ def ProcessCommandStart(Message: types.Message):
 			)
 		User.set_expected_type("call")
 	
+InitializeReplyKeyboard(Bot, Users)
+
 @Bot.message_handler(content_types = ["text"], regexp = "⚙️ Настройки")
 def ProcessTextReminders(Message: types.Message):
 	# Авторизация пользователя.
@@ -201,6 +218,8 @@ def ProcessShareWithFriends(Message: types.Message):
 def ProcessText(Message: types.Message):
 	User = Manager.auth(Message.from_user)
 
+	InitializeText(Bot, Message, User)
+
 	if User.expected_type == "call":
 		User.set_property("call", Message.text)
 		User.set_expected_type(None)
@@ -303,6 +322,8 @@ def ProcessText(Message: types.Message):
 				Message.chat.id,
 				"Я не совсем понял, что вы от меня хотите.")
 		return
+
+InitializeInlineKeyboard(Bot, Users)
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("remove_event"))
 def InlineButtonRemoveEvent(Call: types.CallbackQuery):
@@ -636,5 +657,12 @@ def ProcessWithoutReminders(Call: types.CallbackQuery):
 	Bot.delete_message(Call.message.chat.id, Call.message.id)
 	
 	Bot.answer_callback_query(Call.id)
+	
+@Bot.message_handler(content_types = ["audio", "document", "video"])
+def File(Message: types.Message):
+	User = Users.auth(Message.from_user)
+	InitializeFiles(Bot, Message, User)
+
+InitializePhoto(Bot, Users)
 
 Bot.infinity_polling()
