@@ -63,17 +63,13 @@ reminder = Reminder(Bot)
 # >>>>> НАСТРОЙКИ APSHEDULER <<<<< #
 #==========================================================================================#
 
-DefaultReminders = Settings["default_reminders"]
-EveryReminders = Settings["every_reminders"]
-OnceReminders = Settings["once_reminders"]
+StartRemindering = Settings["start_remindering"]
 
 #==========================================================================================#
 # >>>>> ДОБАВЛЕНИЕ ЗАДАНИЙ В APSHEDULER <<<<< #
 #==========================================================================================#
 
-scheduler.add_job(reminder.StartDefault, 'cron', hour = DefaultReminders["hour"], minute=DefaultReminders["minute"])
-scheduler.add_job(reminder.StartEvery, 'cron', hour = EveryReminders["hour"], minute = EveryReminders["minute"])
-scheduler.add_job(reminder.StartOnce, 'cron', hour = OnceReminders["hour"], minute=OnceReminders["minute"])
+scheduler.add_job(reminder.StartRemindering, 'cron', hour = StartRemindering["hour"], minute=StartRemindering["minute"])
 scheduler.start()
 
 #==========================================================================================#
@@ -165,7 +161,7 @@ def ProcessTextMyEvents(Message: types.Message):
 			elif remains > 0:
 				remains = Markdown(str(remains)).escaped_text
 				Bot.send_message(
-					Message.chat.id, f"До события *{name}* осталось {remains} {days}\\!",
+					Message.chat.id, f"*{name}* наступит через {remains} {days}\\!",
 					parse_mode = "MarkdownV2"
 				)
 			else:
@@ -191,7 +187,7 @@ def ProcessTextMyEvents(Message: types.Message):
 							remainsnew = Markdown(str(remainsnew)).escaped_text
 							Bot.send_message(
 								Message.chat.id, 
-								f"До события *{name}* осталось {remainsnew} {days}\\!",
+								f"*{name}* наступит через {remainsnew} {days}\\!",
 								parse_mode = "MarkdownV2"
 						)
 				else:
@@ -200,8 +196,7 @@ def ProcessTextMyEvents(Message: types.Message):
 						Message.chat.id, f"Событие *{name}* было {remains} {days} назад\\!",
 						parse_mode = "MarkdownV2"
 					)
-
-				
+		
 			sleep(0.1)
 	
 @Bot.message_handler(content_types = ["text"], regexp = "📢 Поделиться с друзьями")
@@ -210,7 +205,7 @@ def ProcessShareWithFriends(Message: types.Message):
 
 	Bot.send_message(
 		Message.chat.id, 
-		text='@Dnido_bot\n\nЛучший бот для отсчёта дней до события 🥳\nПользуйся на здоровье!)', 
+		text='@Dnido_bot\n\nПросто топовый бот для отсчёта дней до события 🥳', 
 		reply_markup=InlineKeyboardsBox.AddShare()
 		)
 
@@ -590,6 +585,19 @@ def ProcessChangeName(Call: types.CallbackQuery):
 
 	Bot.answer_callback_query(Call.id)
 
+@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Info"))
+def ProcessInfo(Call: types.CallbackQuery):
+	User = Manager.auth(Call.from_user)
+
+	Bot.send_message(
+		Call.message.chat.id,
+		text = "@Dnido\\_bot предназначен для запоминания событий и отслеживания сколько дней до них осталось\\.\n\n1\\) По умолчанию, если вы создаёте событие, то будут активированы *ежедневные напоминания* 🔔\\. Вы их можете отключить в настройках, нажав на \"Удалить напоминание\"\\. Само событие останется\\.\n\n2\\) Даже если вы удалите напоминания, то не переживайте, в день события мы вам все равно о нём напомним\\! В покое точно не оставим\\! 🤓 Также вы можете установить *разовое напоминание*, например, за 10 дней 📆\\.\n\n_*Пользуемся и не забываем делиться с друзьями\\!*_",
+		parse_mode= "MarkdownV2",
+		reply_markup= InlineKeyboardsBox.OK()
+	)
+
+	Bot.answer_callback_query(Call.id)
+
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("every_day_reminder"))
 def ProcessEveryDayReminders(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
@@ -653,6 +661,13 @@ def ProcessWithoutReminders(Call: types.CallbackQuery):
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Return"))
 def ProcessWithoutReminders(Call: types.CallbackQuery):
+	User = Manager.auth(Call.from_user)
+	Bot.delete_message(Call.message.chat.id, Call.message.id)
+	
+	Bot.answer_callback_query(Call.id)
+
+@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("OK"))
+def ProcessWithoutOK(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
 	Bot.delete_message(Call.message.chat.id, Call.message.id)
 	

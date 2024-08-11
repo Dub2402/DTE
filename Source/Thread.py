@@ -70,11 +70,16 @@ class Reminder:
 		return False
 
 	def __init__(self, bot: TeleBot):
-
 		self.__Bot = bot
 
-	def send(self, ID: int, Call: str, event: dict, Every: bool, Today: bool):
+	def SayHello(self, ID: int, Call: str):
 		Call = Markdown(Call).escaped_text
+		self.__Bot.send_message(
+				ID, 
+				f"Приветствую, {Call}!"
+				)
+
+	def send(self, ID: int, event: dict, Every: bool, Today: bool):
 		Name = Markdown(str(event["Name"])).escaped_text
 		
 		if Every:
@@ -84,7 +89,7 @@ class Reminder:
 				days = FormatDays(remain)
 				self.__Bot.send_message(
 				ID, 
-				f"До события *{Name}* осталось {remain} {days}\\!",
+				f"*{Name}* наступит через {remain} {days}\\!",
 				parse_mode = "MarkdownV2"
 				)
 				return
@@ -102,7 +107,7 @@ class Reminder:
 		elif Today:
 			self.__Bot.send_message(
 				ID, 
-				f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\n{Call}, приветствую\\!\nСегодня ваше событие *{Name}*\\!\n\nХорошего вам дня\\!",
+				f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nСегодня ваше событие *{Name}*\\!\n\nХорошего вам дня\\!",
 				parse_mode = "MarkdownV2"
 			)
 
@@ -111,61 +116,53 @@ class Reminder:
 			days = FormatDays(int(event["Reminder"]))
 			self.__Bot.send_message(
 				ID, 
-				f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\n{Call}, приветствую\\!\nДо события *{Name}* осталось {Reminder} {days}\\!\n\nХорошего вам дня\\!",
+				f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nДо события *{Name}* осталось {Reminder} {days}\\!\n\nХорошего вам дня\\!",
 				parse_mode = "MarkdownV2"
 			)
 
-	def StartOnce(self):
+	def StartRemindering(self):
 		try:
 			UsersID = self.__GetUsersID()
-			
+
 			for ID in UsersID:
 				Data = ReadJSON(f"Data/Users/{ID}.json")
+				IsHello = False
 
 				if "events" in Data["data"].keys():
-					for EventID in Data["data"]["events"].keys():
-						Event = Data["data"]["events"][EventID]
-						Name = Data["data"]["call"]
-						
-						if self.__CheckRemind(Event) and self.__CheckRemindDate(Event):
-							try:
-								self.send(ID, Name, Event, Today=False, Every=False)
-							except Exception as ExceptionData: pass
-							
-		except Exception as ExceptionData: logging.error(str(ExceptionData))
 
-	def StartEvery(self):
-		try:
-			UsersID = self.__GetUsersID()
-			for ID in UsersID:
-				Data = ReadJSON(f"Data/Users/{ID}.json")
-
-				if "events" in Data["data"].keys():
 					for EventID in Data["data"]["events"].keys():
 						Event: dict = Data["data"]["events"][EventID]
 						Call = Data["data"]["call"]
+
+						if self.__CheckTodayRemind(Event) and self.__CheckTodayDate(Event):
+							try:
+								if not IsHello:
+									self.SayHello(ID, Call)
+									IsHello = True
+								
+								self.send(ID, Event, Every=False, Today=True)
+								
+							except Exception as ExceptionData: pass
+
 						if "ReminderFormat" in Event.keys() and self.__CheckFormatRemained(Event):
 							if not self.__CheckTodayDate(Event) and Event["ReminderFormat"] == "EveryDay":
 								try:
-									self.send(ID, Call, Event, Every=True, Today= False)
+									if not IsHello:
+										self.SayHello(ID, Call)
+										IsHello = True
+									
+									self.send(ID, Event, Every=True, Today= False)
+								
 								except Exception as ExceptionData: pass
-
-		except Exception as ExceptionData: logging.error(str(ExceptionData))
-		
-	def StartDefault(self):
-		try:
-			UsersID = self.__GetUsersID()
-			for ID in UsersID:
-				Data = ReadJSON(f"Data/Users/{ID}.json")
-
-				if "events" in Data["data"].keys():
-					for EventID in Data["data"]["events"].keys():
-						Event: dict = Data["data"]["events"][EventID]
-						Call = Data["data"]["call"]
 						
-						if self.__CheckTodayRemind(Event) and self.__CheckTodayDate(Event):
+						if self.__CheckRemind(Event) and self.__CheckRemindDate(Event):
 							try:
-								self.send(ID, Call, Event, Every=False, Today=True)
+								if not IsHello:
+									self.SayHello(ID, Call)
+									IsHello = True
+
+								self.send(ID, Event, Today=False, Every=False)
+
 							except Exception as ExceptionData: pass
-							
+
 		except Exception as ExceptionData: logging.error(str(ExceptionData))
