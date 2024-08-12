@@ -100,7 +100,7 @@ class Reminder:
 					days = FormatDays(remain)
 					self.__Bot.send_message(
 						ID, 
-						f"До события *{Name}* осталось {remain} {days}\\!",
+						f"*{Name}* наступит через {remain} {days}\\!",
 						parse_mode = "MarkdownV2"
 						)
 
