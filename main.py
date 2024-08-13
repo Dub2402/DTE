@@ -75,9 +75,8 @@ scheduler.start()
 #==========================================================================================#
 # >>>>> ПАНЕЛЬ АДМИНИСТИРОВАНИЯ <<<<< #
 #==========================================================================================#
-Users = UsersManager("Data/Users")
 
-InitializeCommands(Bot, Settings["password"], Users)
+InitializeCommands(Bot, Settings["password"], Manager)
 
 @Bot.message_handler(commands=["start"])
 def ProcessCommandStart(Message: types.Message):
@@ -106,7 +105,7 @@ def ProcessCommandStart(Message: types.Message):
 			)
 		User.set_expected_type("call")
 	
-InitializeReplyKeyboard(Bot, Users)
+InitializeReplyKeyboard(Bot, Manager)
 
 @Bot.message_handler(content_types = ["text"], regexp = "⚙️ Настройки")
 def ProcessTextReminders(Message: types.Message):
@@ -196,16 +195,21 @@ def ProcessTextMyEvents(Message: types.Message):
 						Message.chat.id, f"Событие *{name}* было {remains} {days} назад\\!",
 						parse_mode = "MarkdownV2"
 					)
-		
 			sleep(0.1)
+		Bot.send_message(
+						Message.chat.id,
+						f"_Хорошего тебе дня\\!\\)_",
+						parse_mode = "MarkdownV2"
+						)
 	
 @Bot.message_handler(content_types = ["text"], regexp = "📢 Поделиться с друзьями")
 def ProcessShareWithFriends(Message: types.Message):
 	User = Manager.auth(Message.from_user)
 
-	Bot.send_message(
+	Bot.send_photo(
 		Message.chat.id, 
-		text='@Dnido_bot\n\nПросто топовый бот для отсчёта дней до события 🥳', 
+		photo = "AgACAgIAAxkBAAIfrma7kCoOC2DjhdKtRbwxpCL3w_CxAAK53zEbQxHZSSwnmTmBTZQAAQEAAwIAA3gAAzUE",
+		caption='@Dnido_bot\n\nПросто топовый бот для отсчёта дней до события 🥳', 
 		reply_markup=InlineKeyboardsBox.AddShare()
 		)
 
@@ -318,7 +322,7 @@ def ProcessText(Message: types.Message):
 				"Я не совсем понял, что вы от меня хотите.")
 		return
 
-InitializeInlineKeyboard(Bot, Users)
+InitializeInlineKeyboard(Bot, Manager)
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("remove_event"))
 def InlineButtonRemoveEvent(Call: types.CallbackQuery):
@@ -675,9 +679,9 @@ def ProcessWithoutOK(Call: types.CallbackQuery):
 	
 @Bot.message_handler(content_types = ["audio", "document", "video"])
 def File(Message: types.Message):
-	User = Users.auth(Message.from_user)
+	User = Manager.auth(Message.from_user)
 	InitializeFiles(Bot, Message, User)
 
-InitializePhoto(Bot, Users)
+InitializePhoto(Bot, Manager)
 
 Bot.infinity_polling()

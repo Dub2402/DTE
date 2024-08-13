@@ -81,30 +81,7 @@ class Reminder:
 
 	def send(self, ID: int, event: dict, Every: bool, Today: bool):
 		Name = Markdown(str(event["Name"])).escaped_text
-		
-		if Every:
-			remain = Calculator(event["Date"])
-			if remain > 0:
-				remain = Markdown(str(remain)).escaped_text
-				days = FormatDays(remain)
-				self.__Bot.send_message(
-				ID, 
-				f"*{Name}* наступит через {remain} {days}\\!",
-				parse_mode = "MarkdownV2"
-				)
-				return
-			if remain < 0 and "Format" in event.keys():
-				if event["Format"] == "Remained":
-					skinwalker = Skinwalker(event["Date"])
-					remain = Calculator(skinwalker)
-					days = FormatDays(remain)
-					self.__Bot.send_message(
-						ID, 
-						f"*{Name}* наступит через {remain} {days}\\!",
-						parse_mode = "MarkdownV2"
-						)
-
-		elif Today:
+		if Today:
 			self.__Bot.send_message(
 				ID, 
 				f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nСегодня ваше событие *{Name}*\\!\n\nХорошего вам дня\\!",
@@ -120,40 +97,76 @@ class Reminder:
 				parse_mode = "MarkdownV2"
 			)
 
+	def send_long_messages(self, Messages):
+
+		for ID in Messages.keys():
+			Reminders = list()
+			Call = Markdown(str(Messages[ID]["Call"])).escaped_text
+			for i in range(len(Messages[ID]["Events"])):
+				
+				Name = Markdown(str(Messages[ID]["Events"][i]["Name"])).escaped_text
+				
+				Remain = Calculator(Messages[ID]["Events"][i]["Date"])	
+				if Remain < 0 and "Format" in Messages[ID]["Events"][i].keys():
+					if Messages[ID]["Events"][i]["Format"] == "Remained":
+						skinwalker = Skinwalker(Messages[ID]["Events"][i]["Date"])
+						Remain = Calculator(skinwalker)
+						Days = FormatDays(Remain)
+
+
+				Days = FormatDays(Remain)
+				Reminders.append(f"*{Name}* наступит через {Remain} {Days}\\!")
+
+			base = f"Приветствую, {Call}\\!\n\n"
+			end = f"_Хорошего тебе дня\\!\\)_"
+			for i in range(len(Reminders)):
+
+				if len(base + Reminders[i] + end) < 2000: base += Reminders[i] + "\n\n" 
+				
+				if len(base + Reminders[i] + end) >= 2000 or i == len(Reminders) - 1:
+					self.__Bot.send_message(ID, base + end, parse_mode="MarkdownV2")
+					base = ""
+
 	def StartRemindering(self):
+		Messages: dict = {}
+		CountID = 0
 		try:
 			UsersID = self.__GetUsersID()
 
 			for ID in UsersID:
 				Data = ReadJSON(f"Data/Users/{ID}.json")
 				IsHello = False
+				Events = []
 
 				if "events" in Data["data"].keys():
-
+					
 					for EventID in Data["data"]["events"].keys():
+						
 						Event: dict = Data["data"]["events"][EventID]
 						Call = Data["data"]["call"]
 
 						if self.__CheckTodayRemind(Event) and self.__CheckTodayDate(Event):
+							
 							try:
 								if not IsHello:
 									self.SayHello(ID, Call)
 									IsHello = True
-								
-								self.send(ID, Event, Every=False, Today=True)
+							
+									self.send(ID, Event, Every=False, Today=True)
 								
 							except Exception as ExceptionData: pass
 
 						if "ReminderFormat" in Event.keys() and self.__CheckFormatRemained(Event):
 							if not self.__CheckTodayDate(Event) and Event["ReminderFormat"] == "EveryDay":
-								try:
-									if not IsHello:
-										self.SayHello(ID, Call)
-										IsHello = True
-									
-									self.send(ID, Event, Every=True, Today= False)
+								CountID +=1
+								Events.append(Event)
+								if not IsHello:
+									Messages[ID] = {"Call": Call}
+									IsHello = True	
+								Messages[ID].update({"Events": Events})
+								# 	self.send(ID, Event, Every=True, Today= False)
 								
-								except Exception as ExceptionData: pass
+								# except Exception as ExceptionData: pass
 						
 						if self.__CheckRemind(Event) and self.__CheckRemindDate(Event):
 							try:
@@ -164,5 +177,9 @@ class Reminder:
 								self.send(ID, Event, Today=False, Every=False)
 
 							except Exception as ExceptionData: pass
+
+		except Exception as ExceptionData: logging.error(str(ExceptionData))
+		try:
+			self.send_long_messages(Messages)
 
 		except Exception as ExceptionData: logging.error(str(ExceptionData))
