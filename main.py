@@ -205,11 +205,11 @@ def ProcessTextMyEvents(Message: types.Message):
 @Bot.message_handler(content_types = ["text"], regexp = "📢 Поделиться с друзьями")
 def ProcessShareWithFriends(Message: types.Message):
 	User = Manager.auth(Message.from_user)
-
+	
 	Bot.send_photo(
 		Message.chat.id, 
-		photo = "AgACAgIAAxkBAAIfrma7kCoOC2DjhdKtRbwxpCL3w_CxAAK53zEbQxHZSSwnmTmBTZQAAQEAAwIAA3gAAzUE",
-		caption='@Dnido_bot\n\nПросто топовый бот для отсчёта дней до события 🥳', 
+		photo = Settings["qr_id"],
+		caption='@Dnido_bot\n@Dnido_bot\n@Dnido_bot\n\nПросто топовый бот для отсчёта дней до события 🥳', 
 		reply_markup=InlineKeyboardsBox.AddShare()
 		)
 

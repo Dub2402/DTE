@@ -1,6 +1,6 @@
 {
 	"token": "",
 	"password": "",
-	"start_remindering": {"hour": 0, "minute": "00"}
+	"start_remindering": {"hour": 0, "minute": "00"},
+	"qr_id": ""
 }
-

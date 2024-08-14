@@ -4,6 +4,7 @@ import os
 import dateparser
 from dublib.Methods.JSON import ReadJSON
 from dublib.Methods.System import Clear
+from dublib.TelebotUtils import UsersManager
 from dublib.Polyglot import Markdown
 from telebot import TeleBot
 from datetime import datetime, timedelta
@@ -74,28 +75,35 @@ class Reminder:
 
 	def SayHello(self, ID: int, Call: str):
 		Call = Markdown(Call).escaped_text
-		self.__Bot.send_message(
-				ID, 
-				f"Приветствую, {Call}!"
-				)
+		try:
+			self.__Bot.send_message(
+					ID, 
+					f"Приветствую, {Call}!"
+					)
+		except: pass
 
 	def send(self, ID: int, event: dict, Every: bool, Today: bool):
 		Name = Markdown(str(event["Name"])).escaped_text
 		if Today:
-			self.__Bot.send_message(
-				ID, 
-				f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nСегодня ваше событие *{Name}*\\!\n\nХорошего вам дня\\!",
-				parse_mode = "MarkdownV2"
-			)
+			try:
+				self.__Bot.send_message(
+					ID, 
+					f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nСегодня ваше событие *{Name}*\\!\n\nХорошего вам дня\\!",
+					parse_mode = "MarkdownV2"
+				)
+			except: pass
+			
 
 		else:
 			Reminder = Markdown(str(event["Reminder"])).escaped_text
 			days = FormatDays(int(event["Reminder"]))
-			self.__Bot.send_message(
+			try:
+				self.__Bot.send_message(
 				ID, 
 				f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nДо события *{Name}* осталось {Reminder} {days}\\!\n\nХорошего вам дня\\!",
 				parse_mode = "MarkdownV2"
-			)
+				)
+			except: pass
 
 	def send_long_messages(self, Messages):
 
@@ -124,62 +132,55 @@ class Reminder:
 				if len(base + Reminders[i] + end) < 2000: base += Reminders[i] + "\n\n" 
 				
 				if len(base + Reminders[i] + end) >= 2000 or i == len(Reminders) - 1:
-					self.__Bot.send_message(ID, base + end, parse_mode="MarkdownV2")
+					try:
+						self.__Bot.send_message(ID, base + end, parse_mode="MarkdownV2")
+						logging.info(f"Отправлены ежедневные напоминания {ID}")
+					except: pass
 					base = ""
 
 	def StartRemindering(self):
 		Messages: dict = {}
 		CountID = 0
-		try:
-			UsersID = self.__GetUsersID()
+		UsersID = self.__GetUsersID()
+		self.__Bot
+		for ID in UsersID:
+			Data = ReadJSON(f"Data/Users/{ID}.json")
+			IsHello = False
+			Events = []
+			logging.info(f"Начата рассылка: {ID} ")
 
-			for ID in UsersID:
-				Data = ReadJSON(f"Data/Users/{ID}.json")
-				IsHello = False
-				Events = []
+			if "events" in Data["data"].keys():
+				
+				for EventID in Data["data"]["events"].keys():
+		
+					Event: dict = Data["data"]["events"][EventID]
+					Call = Data["data"]["call"]
 
-				if "events" in Data["data"].keys():
+					if self.__CheckTodayRemind(Event) and self.__CheckTodayDate(Event):
+						if not IsHello:
+							self.SayHello(ID, Call)
+							IsHello = True
+							try:
+								self.send(ID, Event, Every=False, Today=True)
+								logging.info(f"Отправленно сегодняшнее напоминание {ID}")
+							except: pass
+
+					if "ReminderFormat" in Event.keys() and self.__CheckFormatRemained(Event):
+						if not self.__CheckTodayDate(Event) and Event["ReminderFormat"] == "EveryDay":
+							CountID +=1
+							Events.append(Event)
+							if not IsHello:
+								Messages[ID] = {"Call": Call}
+								IsHello = True	
+							Messages[ID].update({"Events": Events})
 					
-					for EventID in Data["data"]["events"].keys():
-						
-						Event: dict = Data["data"]["events"][EventID]
-						Call = Data["data"]["call"]
+					if self.__CheckRemind(Event) and self.__CheckRemindDate(Event):
 
-						if self.__CheckTodayRemind(Event) and self.__CheckTodayDate(Event):
-							
+							if not IsHello:
+								self.SayHello(ID, Call)
+								IsHello = True
 							try:
-								if not IsHello:
-									self.SayHello(ID, Call)
-									IsHello = True
-							
-									self.send(ID, Event, Every=False, Today=True)
-								
-							except Exception as ExceptionData: pass
-
-						if "ReminderFormat" in Event.keys() and self.__CheckFormatRemained(Event):
-							if not self.__CheckTodayDate(Event) and Event["ReminderFormat"] == "EveryDay":
-								CountID +=1
-								Events.append(Event)
-								if not IsHello:
-									Messages[ID] = {"Call": Call}
-									IsHello = True	
-								Messages[ID].update({"Events": Events})
-								# 	self.send(ID, Event, Every=True, Today= False)
-								
-								# except Exception as ExceptionData: pass
-						
-						if self.__CheckRemind(Event) and self.__CheckRemindDate(Event):
-							try:
-								if not IsHello:
-									self.SayHello(ID, Call)
-									IsHello = True
-
 								self.send(ID, Event, Today=False, Every=False)
-
-							except Exception as ExceptionData: pass
-
-		except Exception as ExceptionData: logging.error(str(ExceptionData))
-		try:
-			self.send_long_messages(Messages)
-
-		except Exception as ExceptionData: logging.error(str(ExceptionData))
+								logging.info(f"Отправленно разовое напоминание {ID}")
+							except: pass
+		self.send_long_messages(Messages)
