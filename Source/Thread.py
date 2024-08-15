@@ -70,8 +70,9 @@ class Reminder:
 
 		return False
 
-	def __init__(self, bot: TeleBot):
+	def __init__(self, bot: TeleBot, Manager: UsersManager):
 		self.__Bot = bot
+		self.__Manager = Manager
 
 	def SayHello(self, ID: int, Call: str):
 		Call = Markdown(Call).escaped_text
@@ -80,10 +81,12 @@ class Reminder:
 					ID, 
 					f"Приветствую, {Call}!"
 					)
+			
 		except: pass
 
 	def send(self, ID: int, event: dict, Every: bool, Today: bool):
 		Name = Markdown(str(event["Name"])).escaped_text
+		User = self.__Manager.get_user(ID)
 		if Today:
 			try:
 				self.__Bot.send_message(
@@ -91,7 +94,7 @@ class Reminder:
 					f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nСегодня ваше событие *{Name}*\\!\n\nХорошего вам дня\\!",
 					parse_mode = "MarkdownV2"
 				)
-			except: pass
+			except: User.set_chat_forbidden(True)
 			
 
 		else:
@@ -103,11 +106,12 @@ class Reminder:
 				f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nДо события *{Name}* осталось {Reminder} {days}\\!\n\nХорошего вам дня\\!",
 				parse_mode = "MarkdownV2"
 				)
-			except: pass
+			except: User.set_chat_forbidden(True)
 
 	def send_long_messages(self, Messages):
 
 		for ID in Messages.keys():
+			User = self.__Manager.get_user(ID)
 			Reminders = list()
 			Call = Markdown(str(Messages[ID]["Call"])).escaped_text
 			for i in range(len(Messages[ID]["Events"])):
@@ -135,15 +139,16 @@ class Reminder:
 					try:
 						self.__Bot.send_message(ID, base + end, parse_mode="MarkdownV2")
 						logging.info(f"Отправлены ежедневные напоминания {ID}")
-					except: pass
+					except: User.set_chat_forbidden(True)
 					base = ""
 
 	def StartRemindering(self):
 		Messages: dict = {}
 		CountID = 0
 		UsersID = self.__GetUsersID()
-		self.__Bot
+		
 		for ID in UsersID:
+		
 			Data = ReadJSON(f"Data/Users/{ID}.json")
 			IsHello = False
 			Events = []
@@ -155,15 +160,13 @@ class Reminder:
 		
 					Event: dict = Data["data"]["events"][EventID]
 					Call = Data["data"]["call"]
-
 					if self.__CheckTodayRemind(Event) and self.__CheckTodayDate(Event):
 						if not IsHello:
 							self.SayHello(ID, Call)
 							IsHello = True
-							try:
-								self.send(ID, Event, Every=False, Today=True)
-								logging.info(f"Отправленно сегодняшнее напоминание {ID}")
-							except: pass
+						self.send(ID, Event, Every=False, Today=True)
+						logging.info(f"Отправленно сегодняшнее напоминание {ID}")
+							
 
 					if "ReminderFormat" in Event.keys() and self.__CheckFormatRemained(Event):
 						if not self.__CheckTodayDate(Event) and Event["ReminderFormat"] == "EveryDay":
@@ -179,8 +182,8 @@ class Reminder:
 							if not IsHello:
 								self.SayHello(ID, Call)
 								IsHello = True
-							try:
-								self.send(ID, Event, Today=False, Every=False)
-								logging.info(f"Отправленно разовое напоминание {ID}")
-							except: pass
+				
+							self.send(ID, Event, Today=False, Every=False)
+							logging.info(f"Отправленно разовое напоминание {ID}")
+
 		self.send_long_messages(Messages)

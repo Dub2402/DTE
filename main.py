@@ -6,14 +6,7 @@ from Source.Instruments import Calculator, CheckValidDate, GetFreeID, Skinwalker
 from Source.InlineKeyboards import InlineKeyboards
 from Source.ReplyKeyboard import ReplyKeyboard
 from Source.Thread import Reminder
-from Source.Admin.Panel import (
-	InitializeCommands,
-	InitializeFiles,
-	InitializeInlineKeyboard,
-	InitializePhoto,
-	InitializeReplyKeyboard,
-	InitializeText
-)
+from Source.AdminPanel import Panel
 
 from dublib.Methods.JSON import ReadJSON
 from dublib.Methods.System import CheckPythonMinimalVersion, Clear
@@ -57,7 +50,8 @@ Manager = UsersManager("Data/Users")
 InlineKeyboardsBox = InlineKeyboards()
 ReplyKeyboardBox = ReplyKeyboard()
 scheduler = BackgroundScheduler()
-reminder = Reminder(Bot)
+reminder = Reminder(Bot, Manager)
+AdminPanel = Panel()
 
 #==========================================================================================#
 # >>>>> НАСТРОЙКИ APSHEDULER <<<<< #
@@ -76,7 +70,7 @@ scheduler.start()
 # >>>>> ПАНЕЛЬ АДМИНИСТИРОВАНИЯ <<<<< #
 #==========================================================================================#
 
-InitializeCommands(Bot, Settings["password"], Manager)
+AdminPanel.decorators.commands(Bot, Manager, Settings["password"])
 
 @Bot.message_handler(commands=["start"])
 def ProcessCommandStart(Message: types.Message):
@@ -94,7 +88,7 @@ def ProcessCommandStart(Message: types.Message):
 		call = User.get_property("call")
 		Bot.send_message(
 			Message.chat.id, 
-			f"{call}, мы рады вновь видеть вас! 🤗",
+			f"Мы рады видеть вас снова! 🤗",
 			reply_markup= ReplyKeyboardBox.AddMenu(User)
 			)
 		
@@ -105,7 +99,7 @@ def ProcessCommandStart(Message: types.Message):
 			)
 		User.set_expected_type("call")
 	
-InitializeReplyKeyboard(Bot, Manager)
+AdminPanel.decorators.reply_keyboards(Bot, Manager)
 
 @Bot.message_handler(content_types = ["text"], regexp = "⚙️ Настройки")
 def ProcessTextReminders(Message: types.Message):
@@ -322,7 +316,7 @@ def ProcessText(Message: types.Message):
 				"Я не совсем понял, что вы от меня хотите.")
 		return
 
-InitializeInlineKeyboard(Bot, Manager)
+AdminPanel.decorators.inline_keyboards(Bot, Manager)
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("remove_event"))
 def InlineButtonRemoveEvent(Call: types.CallbackQuery):
@@ -595,7 +589,7 @@ def ProcessInfo(Call: types.CallbackQuery):
 
 	Bot.send_message(
 		Call.message.chat.id,
-		text = "@Dnido\\_bot предназначен для запоминания событий и отслеживания сколько дней до них осталось\\.\n\n1\\) По умолчанию, если вы создаёте событие, то будут активированы *ежедневные напоминания* 🔔\\. Вы их можете отключить в настройках, нажав на \"Удалить напоминание\"\\. Само событие останется\\.\n\n2\\) Даже если вы удалите напоминания, то не переживайте, в день события мы вам все равно о нём напомним\\! В покое точно не оставим\\! 🤓 Также вы можете установить *разовое напоминание*, например, за 10 дней 📆\\.\n\n_*Пользуемся и не забываем делиться с друзьями\\!*_",
+		text = "@Dnido\\_bot предназначен для запоминания событий и отслеживания сколько дней до них осталось\\.\n\n1\\) По умолчанию, если вы создаёте событие, то будут активированы *ежедневные напоминания* 🔔\\. Вы их можете отключить в настройках, нажав на \"Удалить напоминание\"\\. Само событие останется\\.\n\n2\\) Даже если вы удалите напоминания, то не переживайте, в день события мы вам все равно о нём напомним\\! В покое точно не оставим\\! 🤓 Также вы можете установить *разовое напоминание*, например, за 10 дней 📆\\.\n\n_*Пользуйтесь, и не забывайте делиться с друзьями\\!*_",
 		parse_mode= "MarkdownV2",
 		reply_markup= InlineKeyboardsBox.OK()
 	)
@@ -680,8 +674,8 @@ def ProcessWithoutOK(Call: types.CallbackQuery):
 @Bot.message_handler(content_types = ["audio", "document", "video"])
 def File(Message: types.Message):
 	User = Manager.auth(Message.from_user)
-	InitializeFiles(Bot, Message, User)
+	AdminPanel.procedures.files(Bot, User, Message)
 
-InitializePhoto(Bot, Manager)
+AdminPanel.decorators.photo(Bot, Manager)
 
 Bot.infinity_polling()
