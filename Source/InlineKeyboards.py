@@ -109,7 +109,7 @@ class InlineKeyboards:
 
 		# Генерация кнопок.
 		RemoveReminder = types.InlineKeyboardButton(
-			"🗑️ Удалить", 
+			"🚫 Отключить", 
 			callback_data = f"remove_reminder_{EventID}"
 			)
 		
