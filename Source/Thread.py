@@ -91,7 +91,7 @@ class Reminder:
 			try:
 				self.__Bot.send_message(
 					ID, 
-					f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nСегодня ваше событие *{Name}*\\!\n\nХорошего вам дня\\!",
+					f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nСегодня ваше событие *{Name}*\\!\n\nХНе забудьте\\!\\)",
 					parse_mode = "MarkdownV2"
 				)
 			except: User.set_chat_forbidden(True)
@@ -111,9 +111,11 @@ class Reminder:
 	def send_long_messages(self, Messages):
 
 		for ID in Messages.keys():
+			Call = None
 			User = self.__Manager.get_user(ID)
 			Reminders = list()
-			Call = Markdown(str(Messages[ID]["Call"])).escaped_text
+			if "Call" in Messages[ID].keys():
+				Call = Markdown(str(Messages[ID]["Call"])).escaped_text
 			for i in range(len(Messages[ID]["Events"])):
 				
 				Name = Markdown(str(Messages[ID]["Events"][i]["Name"])).escaped_text
@@ -128,8 +130,8 @@ class Reminder:
 
 				Days = FormatDays(Remain)
 				Reminders.append(f"*{Name}* наступит через {Remain} {Days}\\!")
-
-			base = f"Приветствую, {Call}\\!\n\n"
+			if Call:
+				base = f"Приветствую, {Call}\\!\n\n"
 			end = f"_Хорошего тебе дня\\!\\)_"
 			for i in range(len(Reminders)):
 
@@ -174,8 +176,12 @@ class Reminder:
 							Events.append(Event)
 							if not IsHello:
 								Messages[ID] = {"Call": Call}
-								IsHello = True	
-							Messages[ID].update({"Events": Events})
+								IsHello = True
+								
+							if ID in Messages.keys():
+								Messages[ID].update({"Events": Events})
+							else:
+								Messages[ID] = {"Events": Events}
 					
 					if self.__CheckRemind(Event) and self.__CheckRemindDate(Event):
 
