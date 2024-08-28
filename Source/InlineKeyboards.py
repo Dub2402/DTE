@@ -20,6 +20,8 @@ class InlineKeyboards:
 		# Добавление кнопок в меню.
 		Menu.add(DeleteEvent, DeleteReminder, CreateReminder, Сhange, Info, Return, row_width= 1) 
 
+		return Menu
+
 	def OK(self) -> types.InlineKeyboardMarkup:
 		# Кнопочное меню.
 		Menu = types.InlineKeyboardMarkup()

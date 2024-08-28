@@ -32,7 +32,7 @@ class Reminder:
 		return UsersID
 
 	def __CheckFormatRemained(self, event: dict) -> bool:
-		if "Format" in event.keys() and event["Format"] == "Passed": return False
+		if "Format" in event.keys() and event["Format"] == "Passed":return False
 		return True
 	
 	def __CheckRemind(self, event: dict) -> bool:
@@ -84,19 +84,20 @@ class Reminder:
 			
 		except: pass
 
-	def send(self, ID: int, event: dict, Every: bool, Today: bool):
+	def send(self, ID: int, event: dict, EventID: str, Every: bool, Today: bool):
 		Name = Markdown(str(event["Name"])).escaped_text
 		User = self.__Manager.get_user(ID)
 		if Today:
 			try:
 				self.__Bot.send_message(
 					ID, 
-					f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nСегодня ваше событие *{Name}*\\!\n\nХНе забудьте\\!\\)",
+					f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nСегодня ваше событие *{Name}*\\!\n\nНе забудьте\\!\\)",
 					parse_mode = "MarkdownV2"
 				)
-			except: User.set_chat_forbidden(True)
-			
-
+			except Exception as E: 
+				logging.info(f"{E}, {ID}")
+				User.set_chat_forbidden(True)
+		
 		else:
 			Reminder = Markdown(str(event["Reminder"])).escaped_text
 			days = FormatDays(int(event["Reminder"]))
@@ -106,7 +107,14 @@ class Reminder:
 				f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nДо события *{Name}* осталось {Reminder} {days}\\!\n\nХорошего вам дня\\!",
 				parse_mode = "MarkdownV2"
 				)
-			except: User.set_chat_forbidden(True)
+				Events: dict = User.get_property("events")
+				ReminderDict: dict = {"ReminderFormat": "WithoutReminders"}
+				Events[EventID].update(ReminderDict)
+				User.set_property("events", Events)
+
+			except Exception as E: 
+				logging.info(f"{E}, {ID}")
+				User.set_chat_forbidden(True)
 
 	def send_long_messages(self, Messages):
 
@@ -120,18 +128,20 @@ class Reminder:
 				
 				Name = Markdown(str(Messages[ID]["Events"][i]["Name"])).escaped_text
 				
-				Remain = Calculator(Messages[ID]["Events"][i]["Date"])	
+				Remain = Calculator(Messages[ID]["Events"][i]["Date"])
+				if Remain < 0 and "Format" not in Messages[ID]["Events"][i].keys():
+					skinwalker = Skinwalker(Messages[ID]["Events"][i]["Date"])
+					Remain = Calculator(skinwalker)
+					Days = FormatDays(Remain)
 				if Remain < 0 and "Format" in Messages[ID]["Events"][i].keys():
 					if Messages[ID]["Events"][i]["Format"] == "Remained":
 						skinwalker = Skinwalker(Messages[ID]["Events"][i]["Date"])
 						Remain = Calculator(skinwalker)
 						Days = FormatDays(Remain)
-
-
 				Days = FormatDays(Remain)
 				Reminders.append(f"*{Name}* наступит через {Remain} {Days}\\!")
-			if Call:
-				base = f"Приветствую, {Call}\\!\n\n"
+			if Call: base = f"Приветствую, {Call}\\!\n\n"
+			else: base = ""
 			end = f"_Хорошего тебе дня\\!\\)_"
 			for i in range(len(Reminders)):
 
@@ -141,7 +151,9 @@ class Reminder:
 					try:
 						self.__Bot.send_message(ID, base + end, parse_mode="MarkdownV2")
 						logging.info(f"Отправлены ежедневные напоминания {ID}")
-					except: User.set_chat_forbidden(True)
+					except Exception as E: 
+						logging.info(f"{E}, {ID}")
+						User.set_chat_forbidden(True)
 					base = ""
 
 	def StartRemindering(self):
@@ -159,15 +171,15 @@ class Reminder:
 			if "events" in Data["data"].keys():
 				
 				for EventID in Data["data"]["events"].keys():
-		
 					Event: dict = Data["data"]["events"][EventID]
 					Call = Data["data"]["call"]
 					if self.__CheckTodayRemind(Event) and self.__CheckTodayDate(Event):
 						if not IsHello:
 							self.SayHello(ID, Call)
 							IsHello = True
-						self.send(ID, Event, Every=False, Today=True)
-						logging.info(f"Отправленно сегодняшнее напоминание {ID}")
+						if self.send(ID, Event, EventID, Every=False, Today=True):
+							logging.info(f"Отправленно сегодняшнее напоминание {ID}")
+						else: logging.info(f"Не отправленно сегодняшнее напоминание {ID}")
 							
 
 					if "ReminderFormat" in Event.keys() and self.__CheckFormatRemained(Event):
@@ -189,7 +201,9 @@ class Reminder:
 								self.SayHello(ID, Call)
 								IsHello = True
 				
-							self.send(ID, Event, Today=False, Every=False)
-							logging.info(f"Отправленно разовое напоминание {ID}")
+							if self.send(ID, Event, EventID, Today=False, Every=False):
+								logging.info(f"Отправленно разовое напоминание {ID}")
+
+							else: logging.info(f"Не отправленно разовое напоминание {ID}")
 
 		self.send_long_messages(Messages)

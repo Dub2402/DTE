@@ -107,7 +107,7 @@ def ProcessTextReminders(Message: types.Message):
 	User = Manager.auth(Message.from_user)
 	Bot.send_message(
 		Message.chat.id, 
-		"Выберите пункт, который вы хотите настроить:", reply_markup= InlineKeyboardsBox.SettingsMenu(User))
+		"Выберите пункт, который вы хотите настроить:", reply_markup = InlineKeyboardsBox.SettingsMenu(User))
 		
 @Bot.message_handler(content_types = ["text"], regexp = "➕ Новое событие")
 def ProcessTextNewEvent(Message: types.Message):
@@ -411,7 +411,9 @@ def InlineButtonPassedDays(Call: types.CallbackQuery):
 
 	Event: dict = User.get_property("events")
 	Format: dict = {"Format": "Passed"}
+	ReminderFormat: dict = {"ReminderFormat": "WithoutReminders"}
 	Event[FreeID].update(Format)
+	Event[FreeID].update(ReminderFormat)
 	User.set_property("events", Event)
 
 	days = FormatDays(remains)
@@ -550,12 +552,19 @@ def ProcessDeleteReminder(Call: types.CallbackQuery):
 			if "ReminderFormat" in somedict[EventID].keys():
 				
 				if somedict[EventID]["ReminderFormat"] == "EveryDay":
-					
-					Bot.send_message(
-					Call.message.chat.id,
-					f"*{Name}*\nУстановлены ежедневные напоминания\\!",
-					reply_markup = InlineKeyboardsBox.RemoveReminder(EventID),
-					parse_mode = "MarkdownV2")
+					if "Format" in somedict[EventID].keys() and somedict[EventID]["Format"] != "Passed":
+						Bot.send_message(
+						Call.message.chat.id,
+						f"*{Name}*\nУстановлены ежедневные напоминания\\!",
+						reply_markup = InlineKeyboardsBox.RemoveReminder(EventID),
+						parse_mode = "MarkdownV2")
+				if somedict[EventID]["ReminderFormat"] == "EveryDay":
+					if "Format" not in somedict[EventID].keys():
+						Bot.send_message(
+						Call.message.chat.id,
+						f"*{Name}*\nУстановлены ежедневные напоминания\\!",
+						reply_markup = InlineKeyboardsBox.RemoveReminder(EventID),
+						parse_mode = "MarkdownV2")
 					
 				if somedict[EventID]["ReminderFormat"] == "OnceDay":
 					if "Reminder" in somedict[EventID].keys():
