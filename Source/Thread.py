@@ -94,6 +94,7 @@ class Reminder:
 					f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nСегодня ваше событие *{Name}*\\!\n\nНе забудьте\\!\\)",
 					parse_mode = "MarkdownV2"
 				)
+				logging.info(f"Отправленно сегодняшнее напоминание {ID}")
 			except Exception as E: 
 				logging.info(f"{E}, {ID}")
 				User.set_chat_forbidden(True)
@@ -111,6 +112,7 @@ class Reminder:
 				ReminderDict: dict = {"ReminderFormat": "WithoutReminders"}
 				Events[EventID].update(ReminderDict)
 				User.set_property("events", Events)
+				logging.info(f"Отправленно разовое напоминание {ID}")
 
 			except Exception as E: 
 				logging.info(f"{E}, {ID}")
@@ -140,21 +142,18 @@ class Reminder:
 						Days = FormatDays(Remain)
 				Days = FormatDays(Remain)
 				Reminders.append(f"*{Name}* наступит через {Remain} {Days}\\!")
-			if Call: base = f"Приветствую, {Call}\\!\n\n"
-			else: base = ""
-			end = f"_Хорошего тебе дня\\!\\)_"
+			base = ""
 			for i in range(len(Reminders)):
 
-				if len(base + Reminders[i] + end) < 2000: base += Reminders[i] + "\n\n" 
+				if len(base + Reminders[i]) < 2000: base += Reminders[i] + "\n\n" 
 				
-				if len(base + Reminders[i] + end) >= 2000 or i == len(Reminders) - 1:
+				if len(base + Reminders[i]) >= 2000 or i == len(Reminders) - 1:
 					try:
-						self.__Bot.send_message(ID, base + end, parse_mode="MarkdownV2")
+						self.__Bot.send_message(ID, base, parse_mode="MarkdownV2")
 						logging.info(f"Отправлены ежедневные напоминания {ID}")
 					except Exception as E: 
 						logging.info(f"{E}, {ID}")
 						User.set_chat_forbidden(True)
-					base = ""
 
 	def StartRemindering(self):
 		Messages: dict = {}
@@ -177,10 +176,8 @@ class Reminder:
 						if not IsHello:
 							self.SayHello(ID, Call)
 							IsHello = True
-						if self.send(ID, Event, EventID, Every=False, Today=True):
-							logging.info(f"Отправленно сегодняшнее напоминание {ID}")
-						else: logging.info(f"Не отправленно сегодняшнее напоминание {ID}")
-							
+						self.send(ID, Event, EventID, Every=False, Today=True)
+											
 
 					if "ReminderFormat" in Event.keys() and self.__CheckFormatRemained(Event):
 						if not self.__CheckTodayDate(Event) and Event["ReminderFormat"] == "EveryDay":
@@ -201,9 +198,6 @@ class Reminder:
 								self.SayHello(ID, Call)
 								IsHello = True
 				
-							if self.send(ID, Event, EventID, Today=False, Every=False):
-								logging.info(f"Отправленно разовое напоминание {ID}")
-
-							else: logging.info(f"Не отправленно разовое напоминание {ID}")
+							self.send(ID, Event, EventID, Today=False, Every=False)
 
 		self.send_long_messages(Messages)
