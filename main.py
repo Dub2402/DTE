@@ -58,12 +58,14 @@ AdminPanel = Panel()
 #==========================================================================================#
 
 StartRemindering = Settings["start_remindering"]
+ContinueRemindering = Settings["continue_remindering"]
 
 #==========================================================================================#
 # >>>>> ДОБАВЛЕНИЕ ЗАДАНИЙ В APSHEDULER <<<<< #
 #==========================================================================================#
 
 scheduler.add_job(reminder.StartRemindering, 'cron', hour = StartRemindering["hour"], minute=StartRemindering["minute"])
+scheduler.add_job(reminder.ContinueRemindering, 'cron', hour = ContinueRemindering["hour"], minute=ContinueRemindering["minute"])
 scheduler.start()
 
 #==========================================================================================#
@@ -88,7 +90,7 @@ def ProcessCommandStart(Message: types.Message):
 		call = User.get_property("call")
 		Bot.send_message(
 			Message.chat.id, 
-			f"{call}, мы рады видеть тебя снова! 🤗",
+			f"{call}, мы рады тебя видеть снова! 🤗",
 			reply_markup= ReplyKeyboardBox.AddMenu(User)
 			)
 		

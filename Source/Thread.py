@@ -155,6 +155,27 @@ class Reminder:
 						logging.info(f"{E}, {ID}")
 						User.set_chat_forbidden(True)
 
+	def ContinueRemindering(self):
+		Messages: dict = {}
+		CountID = 0
+		UsersID = self.__GetUsersID()
+		
+		for ID in UsersID:
+		
+			Data = ReadJSON(f"Data/Users/{ID}.json")
+			Events = []
+
+			if "events" in Data["data"].keys():
+				
+				for EventID in Data["data"]["events"].keys():
+					Event: dict = Data["data"]["events"][EventID]
+					Call = Data["data"]["call"]
+					if self.__CheckTodayRemind(Event) and self.__CheckTodayDate(Event):
+						self.send(ID, Event, EventID, Every=False, Today=True)
+					
+					if self.__CheckRemind(Event) and self.__CheckRemindDate(Event):
+							self.send(ID, Event, EventID, Today=False, Every=False)
+	
 	def StartRemindering(self):
 		Messages: dict = {}
 		CountID = 0
@@ -163,7 +184,6 @@ class Reminder:
 		for ID in UsersID:
 		
 			Data = ReadJSON(f"Data/Users/{ID}.json")
-			IsHello = False
 			Events = []
 			logging.info(f"Начата рассылка: {ID} ")
 
@@ -172,32 +192,16 @@ class Reminder:
 				for EventID in Data["data"]["events"].keys():
 					Event: dict = Data["data"]["events"][EventID]
 					Call = Data["data"]["call"]
-					if self.__CheckTodayRemind(Event) and self.__CheckTodayDate(Event):
-						if not IsHello:
-							self.SayHello(ID, Call)
-							IsHello = True
-						self.send(ID, Event, EventID, Every=False, Today=True)
-											
 
 					if "ReminderFormat" in Event.keys() and self.__CheckFormatRemained(Event):
 						if not self.__CheckTodayDate(Event) and Event["ReminderFormat"] == "EveryDay":
 							CountID +=1
 							Events.append(Event)
-							if not IsHello:
-								Messages[ID] = {"Call": Call}
-								IsHello = True
-								
-							if ID in Messages.keys():
-								Messages[ID].update({"Events": Events})
-							else:
-								Messages[ID] = {"Events": Events}
+							Messages[ID] = {"Events": Events}
 					
-					if self.__CheckRemind(Event) and self.__CheckRemindDate(Event):
-
-							if not IsHello:
-								self.SayHello(ID, Call)
-								IsHello = True
-				
-							self.send(ID, Event, EventID, Today=False, Every=False)
-
 		self.send_long_messages(Messages)
+
+
+
+
+

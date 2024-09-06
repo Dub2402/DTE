@@ -13,12 +13,12 @@ class InlineKeyboards:
 		# Генерация кнопок.
 		DeleteEvent = types.InlineKeyboardButton("🗑 Удалить событие", callback_data = f"Remove_event")
 		CreateReminder = types.InlineKeyboardButton("➕ Создать напоминание", callback_data = f"Create_reminder")
-		DeleteReminder = types.InlineKeyboardButton("🔕 Отключить напоминание", callback_data = f"Delete_reminder")
+		DeleteReminder = types.InlineKeyboardButton("🔕 Отключить напоминания", callback_data = f"Delete_reminder")
 		Сhange = types.InlineKeyboardButton("🔁 Изменить имя", callback_data = f"Change")
 		Info = types.InlineKeyboardButton("ℹ️ Инфа", callback_data = f"Info")
 		Return = types.InlineKeyboardButton("🔙 Назад", callback_data = f"Return")
 		# Добавление кнопок в меню.
-		Menu.add(DeleteEvent, DeleteReminder, CreateReminder, Сhange, Info, Return, row_width= 1) 
+		Menu.add(DeleteReminder, CreateReminder, DeleteEvent, Сhange, Info, Return, row_width= 1) 
 
 		return Menu
 
