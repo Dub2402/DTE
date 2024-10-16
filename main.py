@@ -117,7 +117,7 @@ def ProcessTextNewEvent(Message: types.Message):
 
 	Bot.send_message(
 		Message.chat.id, 
-		"Введите, пожалуйста, название события, которое вы ждёте\\! 😉 \n\n",
+		"Введите, пожалуйста, название события, которое вы так ждёте\\! 😉 \n\n",
 			parse_mode = "MarkdownV2"
 		)
 	User.set_expected_type("name")
@@ -125,6 +125,7 @@ def ProcessTextNewEvent(Message: types.Message):
 @Bot.message_handler(content_types = ["text"], regexp = "🗓 Мои события")
 def ProcessTextMyEvents(Message: types.Message):
 	User = Manager.auth(Message.from_user)
+	DeleteMessages = list()
 
 	if not User.get_property("events"):
 		Bot.send_message(
@@ -136,11 +137,14 @@ def ProcessTextMyEvents(Message: types.Message):
 
 	else:
 		call = Markdown(str(User.get_property("call"))).escaped_text
-		Events = User.get_property("events")
-		Bot.send_message(
+		Events = User.get_property("events").copy()
+		DeleteMessage = Bot.send_message(
 					Message.chat.id,
 					f"Приветствую, {call}\\!",
 					parse_mode = "MarkdownV2")
+		
+		DeleteMessages.append(DeleteMessage.id)
+		
 		
 		for EventID in Events.keys():
 			remains = Calculator(User.get_property("events")[EventID]["Date"])
@@ -151,22 +155,23 @@ def ProcessTextMyEvents(Message: types.Message):
 				Bot.send_message(
 					Message.chat.id,
 					f"Ваше событие *{name}* сегодня\\.",
-					parse_mode = "MarkdownV2")
+					parse_mode = "MarkdownV2",
+					reply_markup = InlineKeyboardsBox.RemoveEvent(EventID))
 
 			elif remains > 0:
 				remains = Markdown(str(remains)).escaped_text
 				Bot.send_message(
 					Message.chat.id, f"*{name}* наступит через {remains} {days}\\!",
-					parse_mode = "MarkdownV2"
-				)
+					parse_mode = "MarkdownV2",
+					reply_markup = InlineKeyboardsBox.RemoveEvent(EventID))
 			else:
 				if "Format" in Events[EventID]:
 					if Events[EventID]["Format"] == "Passed":
 						remains = Markdown(str(abs(remains))).escaped_text
 						Bot.send_message(
 							Message.chat.id, f"Событие *{name}* было {remains} {days} назад\\!",
-							parse_mode = "MarkdownV2"
-						)
+							parse_mode = "MarkdownV2",
+							reply_markup = InlineKeyboardsBox.RemoveEvent(EventID))
 
 					if Events[EventID]["Format"] == "Remained":
 						newdate = Skinwalker(User.get_property("events")[EventID]["Date"])
@@ -176,27 +181,30 @@ def ProcessTextMyEvents(Message: types.Message):
 							Bot.send_message(
 								Message.chat.id,
 								f"Ваше событие *{name}* сегодня\\.",
-								parse_mode = "MarkdownV2"
-								)
+								parse_mode = "MarkdownV2",
+								reply_markup = InlineKeyboardsBox.RemoveEvent(EventID))
 						else:
 							remainsnew = Markdown(str(remainsnew)).escaped_text
 							Bot.send_message(
 								Message.chat.id, 
 								f"*{name}* наступит через {remainsnew} {days}\\!",
-								parse_mode = "MarkdownV2"
-						)
+								parse_mode = "MarkdownV2",
+								reply_markup = InlineKeyboardsBox.RemoveEvent(EventID))
 				else:
 					remains = Markdown(str(abs(remains))).escaped_text
 					Bot.send_message(
 						Message.chat.id, f"Событие *{name}* было {remains} {days} назад\\!",
-						parse_mode = "MarkdownV2"
-					)
+						parse_mode = "MarkdownV2",
+						reply_markup = InlineKeyboardsBox.RemoveEvent(EventID))
 			sleep(0.1)
-		Bot.send_message(
+		DeleteMessage = Bot.send_message(
 						Message.chat.id,
 						f"_Хорошего тебе дня\\!\\)_",
 						parse_mode = "MarkdownV2"
 						)
+		
+		DeleteMessages.append(DeleteMessage.id)
+		User.set_temp_property("ID_DelMessage", DeleteMessages)
 	
 @Bot.message_handler(content_types = ["text"], regexp = "📢 Поделиться с друзьями")
 def ProcessShareWithFriends(Message: types.Message):
@@ -322,16 +330,17 @@ AdminPanel.decorators.inline_keyboards(Bot, Manager)
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("remove_event"))
 def InlineButtonRemoveEvent(Call: types.CallbackQuery):
+	print(666)
 	User = Manager.auth(Call.from_user)
 
 	EventID = Call.data.split("_")[-1]
 	Events: dict = User.get_property("events")
 	del Events[EventID]
 	User.set_property("events", Events)
-
 	Bot.delete_message(Call.message.chat.id, Call.message.id)
 	if not User.get_property("events"):
-		Bot.delete_message(Call.message.chat.id, User.get_property("ID_DelMessage"))
+		for ID in User.get_property("ID_DelMessage"):
+			Bot.delete_message(Call.message.chat.id, ID)
 		User.clear_temp_properties()
 	
 	Bot.answer_callback_query(Call.id)
@@ -367,7 +376,7 @@ def InlineButtonCreateEvent(Call: types.CallbackQuery):
 
 	Bot.send_message(
 		Call.message.chat.id, 
-		"Введите, пожалуйста, название события, которое вы ждёте\\! 😉 \n\n_Например_\\: День рождения",
+		"Введите, пожалуйста, название события, которое вы так ждёте\\! 😉 \n\n_Например_\\: День рождения",
 		parse_mode = "MarkdownV2"
 	)
 	User.set_expected_type("name")
@@ -458,35 +467,6 @@ def InlineButtonRemainedDays(Call: types.CallbackQuery):
 
 	Bot.answer_callback_query(Call.id)
 
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Remove_event"))
-def ProcessDeleteEvent(Call: types.CallbackQuery):
-	User = Manager.auth(Call.from_user)
-
-	if not User.get_property("events"):
-		Bot.send_message(
-			Call.message.chat.id, 
-			"Вы не создали ни одного события 🙄\nНужно это дело исправить\\!\\)",
-			parse_mode = "MarkdownV2", 
-			reply_markup= InlineKeyboardsBox.AddNewEvent()
-		)
-
-	else:
-		somedict = User.get_property("events").copy()
-		DeleteMessage = Bot.send_message(
-					Call.message.chat.id,
-					f"Ваши события: ")
-		
-		User.set_temp_property("ID_DelMessage", DeleteMessage.id)
-		for EventID in somedict.keys():
-			name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
-			Bot.send_message(
-				Call.message.chat.id,
-				f"*{name}*",
-				reply_markup = InlineKeyboardsBox.RemoveEvent(EventID),
-				parse_mode = "MarkdownV2")
-			sleep(0.1)
-	Bot.answer_callback_query(Call.id)
-
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Create_reminder"))
 def ProcessTextNewReminder(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
@@ -554,14 +534,7 @@ def ProcessDeleteReminder(Call: types.CallbackQuery):
 			if "ReminderFormat" in somedict[EventID].keys():
 				
 				if somedict[EventID]["ReminderFormat"] == "EveryDay":
-					if "Format" in somedict[EventID].keys() and somedict[EventID]["Format"] != "Passed":
-						Bot.send_message(
-						Call.message.chat.id,
-						f"*{Name}*\nУстановлены ежедневные напоминания\\!",
-						reply_markup = InlineKeyboardsBox.RemoveReminder(EventID),
-						parse_mode = "MarkdownV2")
-				if somedict[EventID]["ReminderFormat"] == "EveryDay":
-					if "Format" not in somedict[EventID].keys():
+					if "Format" not in somedict[EventID].keys() or "Format" in somedict[EventID].keys() and somedict[EventID]["Format"] == "Remained":
 						Bot.send_message(
 						Call.message.chat.id,
 						f"*{Name}*\nУстановлены ежедневные напоминания\\!",
@@ -612,7 +585,7 @@ def ProcessEveryDayReminders(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
 
 	Events: dict = User.get_property("events")
-	ReminderDict: dict = {"ReminderFormat": "EveryDay"}
+	ReminderDict: dict = {"ReminderFormat": "EveryDay", "Format": "Remained"}
 
 	EventID = User.get_property("EventsID")
 	Events[EventID].update(ReminderDict)
@@ -632,7 +605,7 @@ def ProcessOnceDayReminders(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
 
 	Events: dict = User.get_property("events")
-	ReminderDict: dict = {"ReminderFormat": "OnceDay"}
+	ReminderDict: dict = {"ReminderFormat": "OnceDay", "Format": "Remained"}
 
 	EventID = User.get_property("EventsID")
 	Events[EventID].update(ReminderDict)
