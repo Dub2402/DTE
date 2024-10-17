@@ -11,14 +11,13 @@ class InlineKeyboards:
 		Menu = types.InlineKeyboardMarkup()
 
 		# Генерация кнопок.
-		DeleteEvent = types.InlineKeyboardButton("🗑 Удалить событие", callback_data = f"Remove_event")
-		CreateReminder = types.InlineKeyboardButton("➕ Создать напоминание", callback_data = f"Create_reminder")
 		DeleteReminder = types.InlineKeyboardButton("🔕 Отключить напоминания", callback_data = f"Delete_reminder")
+		ChangeReminder = types.InlineKeyboardButton("🔔 Изменить напоминание", callback_data = f"Change_reminder")
 		Сhange = types.InlineKeyboardButton("🔁 Изменить имя", callback_data = f"Change")
 		Info = types.InlineKeyboardButton("ℹ️ Инфа", callback_data = f"Info")
 		Return = types.InlineKeyboardButton("🔙 Назад", callback_data = f"Return")
 		# Добавление кнопок в меню.
-		Menu.add(DeleteReminder, CreateReminder, DeleteEvent, Сhange, Info, Return, row_width= 1) 
+		Menu.add(DeleteReminder, ChangeReminder, Сhange, Info, Return, row_width= 1) 
 
 		return Menu
 
@@ -40,27 +39,12 @@ class InlineKeyboards:
 
 		# Генерация кнопок.
 		RemoveEvent = types.InlineKeyboardButton(
-			"🗑️ Удалить", 
+			"Удалить", 
 			callback_data = f"remove_event_{EventID}"
 			)
 		
 		# Добавление кнопок в меню.
 		Menu.add(RemoveEvent)
-
-		return Menu
-	
-	def ChoiceEventToAddReminder(self, EventID: int) -> types.InlineKeyboardMarkup:
-		# Кнопочное меню.
-		Menu = types.InlineKeyboardMarkup()
-
-		# Генерация кнопок.
-		Choice = types.InlineKeyboardButton(
-			"🔔 Создать напоминание", 
-			callback_data = f"choice_event_{EventID}"
-			)
-		
-		# Добавление кнопок в меню.
-		Menu.add(Choice)
 
 		return Menu
 
@@ -72,6 +56,21 @@ class InlineKeyboards:
 		Choice = types.InlineKeyboardButton(
 			"🔔 Изменить напоминание", 
 			callback_data = f"choice_event_{EventID}"
+			)
+		
+		# Добавление кнопок в меню.
+		Menu.add(Choice)
+
+		return Menu
+	
+	def ChoiceReminderForNewEvent(self, EventID: int) -> types.InlineKeyboardMarkup:
+		# Кнопочное меню.
+		Menu = types.InlineKeyboardMarkup()
+
+		# Генерация кнопок.
+		Choice = types.InlineKeyboardButton(
+			"Настроить напоминания", 
+			callback_data = f"choice_event_{EventID}_"
 			)
 		
 		# Добавление кнопок в меню.
@@ -137,7 +136,31 @@ class InlineKeyboards:
 		
 		return Menu
 	
-	def ChoiceFormatReminder(self, user: UserData) -> types.InlineKeyboardMarkup:
+	def ChoiceFormatReminderNew(self, user: UserData) -> types.InlineKeyboardMarkup:
+		# Кнопочное меню.
+		Menu = types.InlineKeyboardMarkup()
+		
+		# Генерация кнопок.
+		EveryDayReminders = types.InlineKeyboardButton(
+			"Оставить ежедневные напоминания", 
+			callback_data = "every_day_reminder"
+			)
+		OnceReminder = types.InlineKeyboardButton(
+			"Создать разовое напоминание", 
+			callback_data = "once_reminder"
+			)
+		WithOutReminders = types.InlineKeyboardButton(
+			"Без напоминаний", 
+			callback_data = "without_reminders"
+			)
+
+		# Добавление кнопок в меню.
+		Menu.add(EveryDayReminders, OnceReminder, WithOutReminders, row_width = 1)
+		
+		return Menu
+	
+
+	def ChoiceFormatReminderChange(self, user: UserData) -> types.InlineKeyboardMarkup:
 		# Кнопочное меню.
 		Menu = types.InlineKeyboardMarkup()
 		
