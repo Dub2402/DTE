@@ -1,5 +1,6 @@
 from dublib.TelebotUtils import UserData
 from telebot import types
+from Source.Instruments import _
 
 class InlineKeyboards:
 
@@ -11,11 +12,11 @@ class InlineKeyboards:
 		Menu = types.InlineKeyboardMarkup()
 
 		# Генерация кнопок.
-		DeleteReminder = types.InlineKeyboardButton("🔕 Отключить напоминания", callback_data = f"Delete_reminder")
-		ChangeReminder = types.InlineKeyboardButton("🔔 Изменить напоминание", callback_data = f"Change_reminder")
-		Сhange = types.InlineKeyboardButton("🔁 Изменить имя", callback_data = f"Change")
-		Info = types.InlineKeyboardButton("ℹ️ Инфа", callback_data = f"Info")
-		Return = types.InlineKeyboardButton("🔙 Назад", callback_data = f"Return")
+		DeleteReminder = types.InlineKeyboardButton(_("🔕 Отключить напоминания"), callback_data = f"Delete_reminder")
+		ChangeReminder = types.InlineKeyboardButton(_("🔔 Изменить напоминание"), callback_data = f"Change_reminder")
+		Сhange = types.InlineKeyboardButton(_("🔁 Изменить имя"), callback_data = f"Change")
+		Info = types.InlineKeyboardButton(_("ℹ️ Инфа"), callback_data = f"Info")
+		Return = types.InlineKeyboardButton(_("🔙 Назад"), callback_data = f"Return")
 		# Добавление кнопок в меню.
 		Menu.add(DeleteReminder, ChangeReminder, Сhange, Info, Return, row_width= 1) 
 
@@ -26,7 +27,7 @@ class InlineKeyboards:
 		Menu = types.InlineKeyboardMarkup()
 
 		# Генерация кнопок.
-		OK = types.InlineKeyboardButton("Ясненько", callback_data = f"OK")
+		OK = types.InlineKeyboardButton(_("Ясненько"), callback_data = f"OK")
 		
 		# Добавление кнопок в меню.
 		Menu.add(OK, row_width= 1) 
@@ -39,7 +40,7 @@ class InlineKeyboards:
 
 		# Генерация кнопок.
 		RemoveEvent = types.InlineKeyboardButton(
-			"Удалить", 
+			_("Удалить"), 
 			callback_data = f"remove_event_{EventID}"
 			)
 		
@@ -54,7 +55,7 @@ class InlineKeyboards:
 
 		# Генерация кнопок.
 		Choice = types.InlineKeyboardButton(
-			"🔔 Изменить напоминание", 
+			_("🔔 Изменить напоминание"), 
 			callback_data = f"choice_event_{EventID}"
 			)
 		
@@ -69,7 +70,7 @@ class InlineKeyboards:
 
 		# Генерация кнопок.
 		Choice = types.InlineKeyboardButton(
-			"Настроить напоминания", 
+			_("Настроить напоминания"), 
 			callback_data = f"choice_event_{EventID}_"
 			)
 		
@@ -82,7 +83,7 @@ class InlineKeyboards:
 		Menu = types.InlineKeyboardMarkup()
 
 		Share = types.InlineKeyboardButton(
-			"Поделиться", 
+			_("Поделиться"), 
 			switch_inline_query='\n\nПросто топовый бот для отсчёта дней до события 🥳'
 			)
 		
@@ -94,7 +95,7 @@ class InlineKeyboards:
 		Menu = types.InlineKeyboardMarkup()
 
 		Create = types.InlineKeyboardButton(
-			"Создать событие", 
+			_("Создать событие"), 
 			callback_data = "create_event"
 			)
 		
@@ -108,7 +109,7 @@ class InlineKeyboards:
 
 		# Генерация кнопок.
 		RemoveReminder = types.InlineKeyboardButton(
-			"🔕 Отключить", 
+			_("🔕 Отключить"), 
 			callback_data = f"remove_reminder_{EventID}"
 			)
 		
@@ -123,11 +124,11 @@ class InlineKeyboards:
 		
 		# Генерация кнопок.
 		Remained = types.InlineKeyboardButton(
-			"Сколько дней осталось", 
+			_("Сколько дней осталось"), 
 			callback_data = f"remained_days_{FreeID}"
 			)
 		Passed = types.InlineKeyboardButton(
-			"Сколько дней прошло", 
+			_("Сколько дней прошло"), 
 			callback_data = f"passed_days_{FreeID}"
 			)
 
@@ -142,15 +143,15 @@ class InlineKeyboards:
 		
 		# Генерация кнопок.
 		EveryDayReminders = types.InlineKeyboardButton(
-			"Оставить ежедневные напоминания", 
+			_("Оставить ежедневные напоминания"), 
 			callback_data = "every_day_reminder"
 			)
 		OnceReminder = types.InlineKeyboardButton(
-			"Создать разовое напоминание", 
+			_("Создать разовое напоминание"), 
 			callback_data = "once_reminder"
 			)
 		WithOutReminders = types.InlineKeyboardButton(
-			"Без напоминаний", 
+			_("Без напоминаний"), 
 			callback_data = "without_reminders"
 			)
 
@@ -166,15 +167,15 @@ class InlineKeyboards:
 		
 		# Генерация кнопок.
 		EveryDayReminders = types.InlineKeyboardButton(
-			"Включить ежедневные напоминания", 
+			_("Включить ежедневные напоминания"), 
 			callback_data = "every_day_reminder"
 			)
 		OnceReminder = types.InlineKeyboardButton(
-			"Включить разовое напоминание", 
+			_("Включить разовое напоминание"), 
 			callback_data = "once_reminder"
 			)
 		WithOutReminders = types.InlineKeyboardButton(
-			"Без напоминаний", 
+			_("Без напоминаний"), 
 			callback_data = "without_reminders"
 			)
 

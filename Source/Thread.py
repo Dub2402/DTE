@@ -10,7 +10,8 @@ from telebot import TeleBot
 from datetime import datetime, timedelta
 
 import logging
-Clear()
+
+from Source.Instruments import _
 
 class Reminder:
 
@@ -79,7 +80,7 @@ class Reminder:
 		try:
 			self.__Bot.send_message(
 					ID, 
-					f"Приветствую, {Call}!"
+					_("Приветствую, %s!") % Call
 					)
 			
 		except: pass
@@ -91,7 +92,7 @@ class Reminder:
 			try:
 				self.__Bot.send_message(
 					ID, 
-					f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nСегодня ваше событие *{Name}*\\!\n\nНе забудьте\\!\\)",
+					_("🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nСегодня ваше событие *%s*\\!\n\nНе забудьте\\!\\)") % Name,
 					parse_mode = "MarkdownV2"
 				)
 				logging.info(f"Отправленно сегодняшнее напоминание {ID}")
@@ -105,7 +106,7 @@ class Reminder:
 			try:
 				self.__Bot.send_message(
 				ID, 
-				f"🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nДо события *{Name}* осталось {Reminder} {days}\\!\n\nХорошего вам дня\\!",
+				_("🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nДо события *%s* осталось %s %s\\!\n\nХорошего вам дня\\!") % (Name, Reminder, days),
 				parse_mode = "MarkdownV2"
 				)
 				Events: dict = User.get_property("events")
@@ -141,7 +142,7 @@ class Reminder:
 						Remain = Calculator(skinwalker)
 						Days = FormatDays(Remain)
 				Days = FormatDays(Remain)
-				Reminders.append(f"*{Name}* наступит через {Remain} {Days}\\!")
+				Reminders.append(_("*%s* наступит через %s %s\\!") % (Name, Remain, Days))
 			base = ""
 			for i in range(len(Reminders)):
 
@@ -200,8 +201,3 @@ class Reminder:
 							Messages[ID] = {"Events": Events}
 					
 		self.send_long_messages(Messages)
-
-
-
-
-

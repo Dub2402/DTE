@@ -1,5 +1,10 @@
 from datetime import date
 import dateparser
+import gettext
+
+_ = gettext.gettext
+try: _ = gettext.translation("DTE", "locales", languages = ["ru"]).gettext
+except FileNotFoundError: pass
 
 def CheckValidDate(Date: str)-> bool:
 	try:
@@ -37,10 +42,10 @@ def GetFreeID(Events: dict) -> int:
 	return FreeID
 
 def FormatDays(remains: int) -> str:
-	days = "дней"
+	days = _("дней")
 	
 	if remains in [11, 12, 13]: pass
-	elif str(remains).endswith("1") and remains not in [11, 12, 13]: days = "день"	
-	elif str(remains).endswith("2") or str(remains).endswith("3") or str(remains).endswith("4") and remains not in [11, 12, 13]: days = "дня"
+	elif str(remains).endswith("1") and remains not in [11, 12, 13]: days = _("день")
+	elif str(remains).endswith("2") or str(remains).endswith("3") or str(remains).endswith("4") and remains not in [11, 12, 13]: days = _("дня")
 		
 	return days
