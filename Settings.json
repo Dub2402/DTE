@@ -1,7 +1,9 @@
 {
 	"token": "",
 	"password": "",
-	"start_remindering": {"hour": 0, "minute": 0},
-	"continue_remindering": {"hour": 0, "minute":0},
-	"qr_id": ""
+	"start_remindering": "",
+	"continue_remindering": "",
+	"share_image_path": "",
+    "chat_id": null, 
+	"language": ""
 	}

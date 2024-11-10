@@ -71,19 +71,10 @@ class Reminder:
 
 		return False
 
-	def __init__(self, bot: TeleBot, Manager: UsersManager):
+	def __init__(self, bot: TeleBot, Manager: UsersManager, language: str):
 		self.__Bot = bot
 		self.__Manager = Manager
-
-	def SayHello(self, ID: int, Call: str):
-		Call = Markdown(Call).escaped_text
-		try:
-			self.__Bot.send_message(
-					ID, 
-					_("Приветствую, %s!") % Call
-					)
-			
-		except: pass
+		self.__language = language
 
 	def send(self, ID: int, event: dict, EventID: str, Every: bool, Today: bool):
 		Name = Markdown(str(event["Name"])).escaped_text
@@ -102,7 +93,7 @@ class Reminder:
 		
 		else:
 			Reminder = Markdown(str(event["Reminder"])).escaped_text
-			days = FormatDays(int(event["Reminder"]))
+			days = FormatDays(int(event["Reminder"]), self.__language)
 			try:
 				self.__Bot.send_message(
 				ID, 
@@ -135,13 +126,13 @@ class Reminder:
 				if Remain < 0 and "Format" not in Messages[ID]["Events"][i].keys():
 					skinwalker = Skinwalker(Messages[ID]["Events"][i]["Date"])
 					Remain = Calculator(skinwalker)
-					Days = FormatDays(Remain)
+					Days = FormatDays(Remain, self.__language)
 				if Remain < 0 and "Format" in Messages[ID]["Events"][i].keys():
 					if Messages[ID]["Events"][i]["Format"] == "Remained":
 						skinwalker = Skinwalker(Messages[ID]["Events"][i]["Date"])
 						Remain = Calculator(skinwalker)
-						Days = FormatDays(Remain)
-				Days = FormatDays(Remain)
+						Days = FormatDays(Remain, self.__language)
+				Days = FormatDays(Remain, self.__language)
 				Reminders.append(_("*%s* наступит через %s %s\\!") % (Name, Remain, Days))
 			base = ""
 			for i in range(len(Reminders)):

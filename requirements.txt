@@ -2,3 +2,4 @@ dublib == 0.12.1
 pytelegrambotapi
 apscheduler
 dateparser
+git+https://github.com/DUB1401/dublib

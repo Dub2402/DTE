@@ -3,7 +3,7 @@ import dateparser
 import gettext
 
 _ = gettext.gettext
-try: _ = gettext.translation("DTE", "locales", languages = ["ru"]).gettext
+try: _ = gettext.translation("DTE", "locales", languages = ["en"]).gettext
 except FileNotFoundError: pass
 
 def CheckValidDate(Date: str)-> bool:
@@ -41,11 +41,17 @@ def GetFreeID(Events: dict) -> int:
 
 	return FreeID
 
-def FormatDays(remains: int) -> str:
-	days = _("дней")
+def FormatDays(remains: int, language : str) -> str:
+	if language == "en":
+		days = "days"
 	
-	if remains in [11, 12, 13]: pass
-	elif str(remains).endswith("1") and remains not in [11, 12, 13]: days = _("день")
-	elif str(remains).endswith("2") or str(remains).endswith("3") or str(remains).endswith("4") and remains not in [11, 12, 13]: days = _("дня")
+		if remains in [1]: days = "day"	
+
+	else:
+		days = "дней"
 		
+		if remains in [11, 12, 13]: pass
+		elif str(remains).endswith("1") and remains not in [11, 12, 13]: days = "день"
+		elif str(remains).endswith("2") or str(remains).endswith("3") or str(remains).endswith("4") and remains not in [11, 12, 13]: days = "дня"
+			
 	return days

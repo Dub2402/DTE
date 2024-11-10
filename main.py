@@ -11,6 +11,7 @@ from Source.AdminPanel import Panel
 from dublib.Methods.JSON import ReadJSON
 from dublib.Methods.System import CheckPythonMinimalVersion, Clear
 from dublib.Methods.Filesystem import MakeRootDirectories
+from dublib.TelebotUtils.Cache import TeleCache
 from dublib.TelebotUtils import UsersManager
 from dublib.Polyglot import Markdown
 
@@ -53,23 +54,33 @@ Manager = UsersManager("Data/Users")
 InlineKeyboardsBox = InlineKeyboards()
 ReplyKeyboardBox = ReplyKeyboard()
 scheduler = BackgroundScheduler()
-reminder = Reminder(Bot, Manager)
+reminder = Reminder(Bot, Manager, Settings["language"])
 AdminPanel = Panel()
-
-#==========================================================================================#
-# >>>>> НАСТРОЙКИ APSHEDULER <<<<< #
-#==========================================================================================#
-
-StartRemindering = Settings["start_remindering"]
-ContinueRemindering = Settings["continue_remindering"]
 
 #==========================================================================================#
 # >>>>> ДОБАВЛЕНИЕ ЗАДАНИЙ В APSHEDULER <<<<< #
 #==========================================================================================#
 
-scheduler.add_job(reminder.StartRemindering, 'cron', hour = StartRemindering["hour"], minute=StartRemindering["minute"])
-scheduler.add_job(reminder.ContinueRemindering, 'cron', hour = ContinueRemindering["hour"], minute=ContinueRemindering["minute"])
+scheduler.add_job(reminder.StartRemindering, 'cron', hour = Settings["start_remindering"].split(":")[0], minute = Settings["start_remindering"].split(":")[1])
+scheduler.add_job(reminder.ContinueRemindering, 'cron', hour = Settings["continue_remindering"].split(":")[0], minute = Settings["continue_remindering"].split(":")[1])
 scheduler.start()
+
+#==========================================================================================#
+# >>>>> ДОБАВЛЕНИЕ ИЗОБРАЖЕНИЯ В КЭШ <<<<< #
+#==========================================================================================#
+
+# Инициализация менеджера кэша.
+Cacher = TeleCache()
+# Установка данных для выгрузки медиафайлов.
+Cacher.set_options(Settings["token"], Settings["chat_id"])
+
+# Получение структуры данных кэшированного файла.
+try:
+	File = Cacher.get_cached_file(Settings["share_image_path"], type = types.InputMediaPhoto)
+	# Получение ID кэшированного файла.
+	FileID = Cacher[Settings["share_image_path"]]
+except KeyError:
+	pass
 
 #==========================================================================================#
 # >>>>> ПАНЕЛЬ АДМИНИСТИРОВАНИЯ <<<<< #
@@ -108,14 +119,14 @@ def ProcessCommandStart(Message: types.Message):
 	
 AdminPanel.decorators.reply_keyboards(Bot, Manager)
 
-@Bot.message_handler(content_types = ["text"], regexp = "⚙️ Настройки")
+@Bot.message_handler(content_types = ["text"], regexp = _("⚙️ Настройки"))
 def ProcessTextReminders(Message: types.Message):
 	User = Manager.auth(Message.from_user)
 	Bot.send_message(
 		Message.chat.id, 
 		_("Выберите пункт, который вы хотите настроить:"), reply_markup = InlineKeyboardsBox.SettingsMenu(User))
 		
-@Bot.message_handler(content_types = ["text"], regexp = "➕ Новое событие")
+@Bot.message_handler(content_types = ["text"], regexp = _("➕ Новое событие"))
 def ProcessTextNewEvent(Message: types.Message):
 	User = Manager.auth(Message.from_user)
 
@@ -126,7 +137,7 @@ def ProcessTextNewEvent(Message: types.Message):
 		)
 	User.set_expected_type("name")
 
-@Bot.message_handler(content_types = ["text"], regexp = "🗓 Мои события")
+@Bot.message_handler(content_types = ["text"], regexp = _("🗓 Мои события"))
 def ProcessTextMyEvents(Message: types.Message):
 	User = Manager.auth(Message.from_user)
 	DeleteMessages = list()
@@ -152,7 +163,7 @@ def ProcessTextMyEvents(Message: types.Message):
 		for EventID in Events.keys():
 			remains = Calculator(User.get_property("events")[EventID]["Date"])
 			name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
-			days = FormatDays(remains)
+			days = FormatDays(remains, Settings["language"])
 
 			if remains == 0:
 				Bot.send_message(
@@ -182,7 +193,7 @@ def ProcessTextMyEvents(Message: types.Message):
 					if Events[EventID]["Format"] == "Remained":
 						newdate = Skinwalker(User.get_property("events")[EventID]["Date"])
 						remainsnew = Calculator(newdate)
-						days = FormatDays(remainsnew)
+						days = FormatDays(remainsnew, Settings["language"])
 						if remainsnew == 0:
 							Bot.send_message(
 								Message.chat.id,
@@ -222,7 +233,7 @@ def ProcessShareWithFriends(Message: types.Message):
 	
 	Bot.send_photo(
 		Message.chat.id, 
-		photo = Settings["qr_id"],
+		photo = FileID,
 		caption = _("@Dnido_bot\n@Dnido_bot\n@Dnido_bot\n\nПросто топовый бот для отсчёта дней до события 🥳"), 
 		reply_markup = InlineKeyboardsBox.AddShare()
 		)
@@ -273,7 +284,7 @@ def ProcessText(Message: types.Message):
 
 			remains = Calculator(User.get_property("events")[FreeID]["Date"])
 			name = Markdown(User.get_property("events")[FreeID]["Name"]).escaped_text
-			days = FormatDays(remains)
+			days = FormatDays(remains, Settings["language"])
 			
 			if remains > 0:
 				Bot.send_message(
@@ -432,7 +443,7 @@ def InlineButtonPassedDays(Call: types.CallbackQuery):
 	Event[FreeID].update(ReminderFormat)
 	User.set_property("events", Event)
 
-	days = FormatDays(remains)
+	days = FormatDays(remains, Settings["language"])
 
 	Bot.send_message(
 		Call.message.chat.id,
@@ -456,7 +467,7 @@ def InlineButtonRemainedDays(Call: types.CallbackQuery):
 	Event[FreeID].update(Format)
 	User.set_property("events", Event)
 
-	days = FormatDays(remains)
+	days = FormatDays(remains, Settings["language"])
 	if remains == 365:
 		Bot.send_message(
 				Call.message.chat.id,
@@ -542,7 +553,7 @@ def ProcessDeleteReminder(Call: types.CallbackQuery):
 					if "Reminder" in somedict[EventID].keys():
 
 						Reminder = Markdown(User.get_property("events")[EventID]["Reminder"]).escaped_text
-						days = FormatDays(Reminder)
+						days = FormatDays(Reminder, Settings["language"])
 						Bot.send_message(
 							Call.message.chat.id,
 							_("*%s*\nНапоминание установлено за %s %s\\!") % (Name, Reminder, days),
