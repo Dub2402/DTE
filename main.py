@@ -106,7 +106,7 @@ def ProcessCommandStart(Message: types.Message):
 		call = User.get_property("call")
 		Bot.send_message(
 			Message.chat.id, 
-			call + _(", мы рады тебя видеть снова! 🤗"),
+			call + _(", мы рады вас видеть снова! 🤗"),
 			reply_markup= ReplyKeyboardBox.AddMenu(User)
 			)
 		
@@ -220,14 +220,14 @@ def ProcessTextMyEvents(Message: types.Message):
 			sleep(0.1)
 		DeleteMessage = Bot.send_message(
 						Message.chat.id,
-						_("_Хорошего тебе дня\\!\\)_"),
+						_("Хорошего тебе дня\\!\\)"),
 						parse_mode = "MarkdownV2"
 						)
 		
 		DeleteMessages.append(DeleteMessage.id)
 		User.set_temp_property("ID_DelMessage", DeleteMessages)
 	
-@Bot.message_handler(content_types = ["text"], regexp = "📢 Поделиться с друзьями")
+@Bot.message_handler(content_types = ["text"], regexp = _("📢 Поделиться с друзьями"))
 def ProcessShareWithFriends(Message: types.Message):
 	User = Manager.auth(Message.from_user)
 	
@@ -341,7 +341,7 @@ def ProcessText(Message: types.Message):
 
 			Bot.send_message(
 				Message.chat.id,
-				_("Информация принята!🫡 Будем держать руку на пульсе!"))
+				_("Информация принята! ✔️ Будем держать руку на пульсе!"))
 		else:
 			Bot.send_message(
 				Message.chat.id,
@@ -494,7 +494,7 @@ def ProcessTextNewReminder(Call: types.CallbackQuery):
 
 		Bot.send_message(
 			Call.message.chat.id, 
-			_("Выберите событие, для которого вы изменить напоминание:"))
+			_("Выберите событие, для которого вы хотели бы изменить напоминание:"))
 		
 		for EventID in Events.keys():
 			name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
@@ -533,7 +533,7 @@ def ProcessDeleteReminder(Call: types.CallbackQuery):
 	else:
 		DeleteMessage = Bot.send_message(
 					Call.message.chat.id,
-					_("Ваши напоминания: "))
+					_("Ваши напоминания:"))
 		User.set_temp_property("ID_DelMessage", DeleteMessage.id)
 
 		for EventID in somedict.keys():
@@ -643,7 +643,7 @@ def ProcessWithoutReminders(Call: types.CallbackQuery):
 	Name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
 	Bot.send_message(
 		Call.message.chat.id,
-			_("Для события *%s* напоминания отключены\\!\n\nСколько осталось дней вы сможете помотреть по кнопке *Мои события* 🖲") % Name,
+			_("Для события *%s* напоминания отключены\\!\n\nНо не переживайте\\! День в день мы вас все равно о нём уведомим\\! 🛎") % Name,
 			parse_mode = "MarkdownV2"
 		)
 	
