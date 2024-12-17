@@ -1,6 +1,6 @@
 from dublib.TelebotUtils import UserData
 from telebot import types
-from Source.Instruments import _
+from Source.Functions import _
 
 class ReplyKeyboard:
 

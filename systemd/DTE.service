@@ -1,16 +1,16 @@
-# Скрипт инициализации сервиса CalculateDateBot.
+# Скрипт инициализации сервиса DTE.
 #==========================================================================================#
-# {Application Directory} – путь к директории со скриптом.
+# Application Directory – путь к директории со скриптом.
 
 [Unit]
-Description=CalculateDateBot
+Description=DTE
 After=network.target
 
 [Service]
 Type=simple
 User=root
 Group=root
-WorkingDirectory={WorkingDirectory}
+WorkingDirectory=Application Directory 
 ExecStart=/bin/bash -c "source .venv/bin/activate && python3 main.py"
 Restart=on-failure
 RestartSec=60

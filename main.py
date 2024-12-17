@@ -2,7 +2,7 @@
 # >>>>> ПОДКЛЮЧЕНИЕ БИБЛИОТЕК И МОДУЛЕЙ <<<<< #
 #==========================================================================================#
 
-from Source.Instruments import Calculator, CheckValidDate, GetFreeID, Skinwalker, FormatDays
+from Source.Functions import Calculator, CheckValidDate, GetFreeID, Skinwalker, FormatDays, _
 from Source.InlineKeyboards import InlineKeyboards
 from Source.ReplyKeyboard import ReplyKeyboard
 from Source.Thread import Reminder
@@ -20,8 +20,6 @@ from time import sleep
 from apscheduler.schedulers.background import BackgroundScheduler
 import telebot
 import logging
-
-from Source.Instruments import _
 
 #==========================================================================================#
 # >>>>> ЛОГГИРОВАНИЕ <<<<< #
@@ -248,12 +246,13 @@ def ProcessText(Message: types.Message):
 		User.set_property("call", Message.text)
 		User.set_expected_type(None)
 
-		call = Markdown(str(User.get_property("call"))).escaped_text
+		call = User.get_property("call")
 		if User.get_property("emoji"):
 			Bot.send_message(
 				Message.chat.id,
 				_("Приятно познакомиться, %s! 😎") % call,
-			reply_markup = ReplyKeyboardBox.AddMenu(User)
+			reply_markup = ReplyKeyboardBox.AddMenu(User), 
+			
 			)
 		else: 
 			Bot.send_message(

@@ -1,5 +1,9 @@
 .venv
 __pycache__
+
 Data
 LOGING.log
 TeleCache.json
+
+QR-code.jpg
+QR-code(en).jpg

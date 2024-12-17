@@ -1,14 +1,19 @@
+from dublib.Methods.JSON import ReadJSON
+
 from datetime import date
 import dateparser
 import gettext
 
+Settings = ReadJSON("Settings.json")
+Language = Settings["language"]
+
 _ = gettext.gettext
-try: _ = gettext.translation("DTE", "locales", languages = ["en"]).gettext
+try: _ = gettext.translation("DTE", "locales", languages = [Language]).gettext
 except FileNotFoundError: pass
 
 def CheckValidDate(Date: str)-> bool:
 	try:
-		dateparser.parse(Date, settings={'DATE_ORDER': 'DMY'}).date()
+		dateparser.parse(Date, settings={'DATE_ORDER': 'DMY','STRICT_PARSING': True}).date()
 		return True
 	except:
 		return False

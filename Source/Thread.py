@@ -1,4 +1,4 @@
-from .Instruments import FormatDays, Calculator, Skinwalker
+from .Functions import FormatDays, Calculator, Skinwalker
 
 import os
 import dateparser
@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 
 import logging
 
-from Source.Instruments import _
+from Source.Functions import _
 
 class Reminder:
 
