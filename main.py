@@ -77,7 +77,7 @@ try:
 	File = Cacher.get_cached_file(Settings["share_image_path"], type = types.InputMediaPhoto)
 	# Получение ID кэшированного файла.
 	FileID = Cacher[Settings["share_image_path"]]
-except KeyError:
+except Exception:
 	pass
 
 #==========================================================================================#
@@ -228,14 +228,20 @@ def ProcessTextMyEvents(Message: types.Message):
 @Bot.message_handler(content_types = ["text"], regexp = _("📢 Поделиться с друзьями"))
 def ProcessShareWithFriends(Message: types.Message):
 	User = Manager.auth(Message.from_user)
-	
-	Bot.send_photo(
-		Message.chat.id, 
-		photo = FileID,
-		caption = _("@Dnido_bot\n@Dnido_bot\n@Dnido_bot\n\nПросто топовый бот для отсчёта дней до события 🥳"), 
-		reply_markup = InlineKeyboardsBox.AddShare()
-		)
-
+	try:
+		Bot.send_photo(
+			Message.chat.id, 
+			photo = FileID,
+			caption = _("@Dnido_bot\n@Dnido_bot\n@Dnido_bot\n\nПросто топовый бот для отсчёта дней до события 🥳"), 
+			reply_markup = InlineKeyboardsBox.AddShare()
+			)
+	except: 
+		Bot.send_message(
+			Message.chat.id,
+			_("@namebot"),
+			reply_markup = InlineKeyboardsBox.AddShare()
+			
+			)
 @Bot.message_handler(content_types=["text"])
 def ProcessText(Message: types.Message):
 	User = Manager.auth(Message.from_user)
