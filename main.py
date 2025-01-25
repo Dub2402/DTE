@@ -328,7 +328,7 @@ def ProcessText(Message: types.Message):
 		User.set_temp_property("date", Message.text)
 		Bot.send_message(
 			Message.chat.id,
-			_("А теперь мне нужна дата вашего события 🤔 \n\n_Пример_\\: 01\\.01\\.2025"), 
+			_("А теперь мне нужна дата вашего события 🤔 \n\n_Пример_\\: 01\\.01\\.2000"), 
 			parse_mode = "MarkdownV2")
 
 		User.set_expected_type("date")
