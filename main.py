@@ -90,13 +90,27 @@ AdminPanel.decorators.commands(Bot, Manager, Settings["password"])
 def ProcessCommandStart(Message: types.Message):
 	User = Manager.auth(Message.from_user)
 	User.set_expected_type(None)
+	try:
+		File = Cacher.get_cached_file(Settings["start_jpg"], type = types.InputMediaPhoto)
+		# Получение ID кэшированного файла.
+		StartID = Cacher[Settings["start_jpg"]]
+	except Exception:
+		pass
 
 	User.set_property("events", {}, False)
-	Bot.send_message(
-		Message.chat.id, 
-		_("🎉 *Добро пожаловать\\!* 🎉\n\nЯ бот, помогающий запоминать события и узнавать, сколько дней до них осталось\\."),
-		parse_mode= "MarkdownV2"
-	)
+	try:
+		Bot.send_photo(
+			Message.chat.id, 
+			photo = StartID,
+			caption = _("🎉 *Добро пожаловать\\!* 🎉\n\nЯ бот, помогающий запоминать события и узнавать, сколько дней до них осталось\\."),
+			parse_mode= "MarkdownV2"
+		)
+	except: 
+		Bot.send_message(
+			Message.chat.id, 
+			text = _("🎉 *Добро пожаловать\\!* 🎉\n\nЯ бот, помогающий запоминать события и узнавать, сколько дней до них осталось\\."),
+			parse_mode= "MarkdownV2"
+		)
 		
 	User.set_temp_property("emoji", False)
 
@@ -232,8 +246,9 @@ def ProcessShareWithFriends(Message: types.Message):
 		Bot.send_photo(
 			Message.chat.id, 
 			photo = FileID,
-			caption = _("@Dnido_bot\n@Dnido_bot\n@Dnido_bot\n\nПросто топовый бот для отсчёта дней до события 🥳"), 
-			reply_markup = InlineKeyboardsBox.AddShare()
+			caption = _("@Dnido_bot\n@Dnido_bot\n@Dnido_bot\n\nПросто <b>Т-т-топовый</b> бот для отсчёта дней до событий 🥳\n\n<b><i>Пользуйся и делись с друзьями!</i></b>"), 
+			reply_markup = InlineKeyboardsBox.AddShare(),
+			parse_mode = "HTML" 
 			)
 	except: 
 		Bot.send_message(
@@ -242,6 +257,7 @@ def ProcessShareWithFriends(Message: types.Message):
 			reply_markup = InlineKeyboardsBox.AddShare()
 			
 			)
+
 @Bot.message_handler(content_types=["text"])
 def ProcessText(Message: types.Message):
 	User = Manager.auth(Message.from_user)
@@ -344,9 +360,15 @@ def ProcessText(Message: types.Message):
 			User.set_property("events", Events)
 			User.set_expected_type(None)
 
+			Name = User.get_property("events")[User.get_property("EventsID")]["Name"]
+			Reminder = User.get_property("events")[User.get_property("EventsID")]["Reminder"]
+			days = FormatDays(Reminder, Settings["language"])
 			Bot.send_message(
 				Message.chat.id,
-				_("Информация принята! ✔️ Будем держать руку на пульсе!"))
+				_("✅ Информация принята!\n\nЗа <b>$reminder $days</b> мы вам напомним о событии <b>$name</b>!").replace("$reminder", str(Reminder)).replace("$name", Name).replace("$days", days),
+				parse_mode = "HTML"
+			)
+			
 		else:
 			Bot.send_message(
 				Message.chat.id,
@@ -418,14 +440,14 @@ def InlineButtonChoiceEventToAddReminder(Call: types.CallbackQuery):
 		Bot.send_message(
 			Call.message.chat.id,
 			_("Выберите тип напоминания:"),
-			reply_markup= InlineKeyboardsBox.ChoiceFormatReminderChange(User)
+			reply_markup = InlineKeyboardsBox.ChoiceFormatReminderChange(User)
 		)
 	else: 
 		EventsID = Call.data.split("_")[-2]
 		Bot.send_message(
 			Call.message.chat.id,
 			_("Выберите тип напоминания:"),
-			reply_markup= InlineKeyboardsBox.ChoiceFormatReminderNew(User)
+			reply_markup = InlineKeyboardsBox.ChoiceFormatReminderNew(User)
 		)
 	
 	User.set_temp_property("EventsID", EventsID)
@@ -493,7 +515,7 @@ def InlineButtonRemainedDays(Call: types.CallbackQuery):
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Change_reminder"))
 def ProcessTextNewReminder(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
-	Events = User.get_property("events")
+	somedict = User.get_property("events").copy()
 			
 	if User.get_property("events"):
 
@@ -501,19 +523,35 @@ def ProcessTextNewReminder(Call: types.CallbackQuery):
 			Call.message.chat.id, 
 			_("Выберите событие, для которого вы хотели бы изменить напоминание:"))
 		
-		for EventID in Events.keys():
-			name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
-			Bot.send_message(
-				Call.message.chat.id,
-				f"*{name}*",
-				reply_markup = InlineKeyboardsBox.ChoiceEventToChangeReminder(EventID),
-				parse_mode = "MarkdownV2")
+		for EventID in somedict.keys():
+			Name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
+			if "ReminderFormat" in somedict[EventID].keys():
+				
+				if somedict[EventID]["ReminderFormat"] == "EveryDay":
+					if "Format" not in somedict[EventID].keys() or "Format" in somedict[EventID].keys() and somedict[EventID]["Format"] == "Remained":
+						Bot.send_message(
+						Call.message.chat.id,
+						_("*%s*\nУстановлены ежедневные напоминания\\!") % Name,
+						reply_markup = InlineKeyboardsBox.ChoiceEventToChangeReminder(EventID),
+						parse_mode = "MarkdownV2")
+					
+				if somedict[EventID]["ReminderFormat"] == "OnceDay":
+					if "Reminder" in somedict[EventID].keys():
+
+						Reminder = Markdown(User.get_property("events")[EventID]["Reminder"]).escaped_text
+						days = FormatDays(Reminder, Settings["language"])
+						Bot.send_message(
+							Call.message.chat.id,
+							_("*%s*\nНапоминание установлено за %s %s\\!") % (Name, Reminder, days),
+							reply_markup = InlineKeyboardsBox.ChoiceEventToChangeReminder(EventID),
+							parse_mode = "MarkdownV2")
+			
 			sleep(0.1)
 
 	elif not User.get_property("events"):
 		Bot.send_message(
 			Call.message.chat.id, 
-			text = _("Для создания напоминания сначала создайте событие!"),
+			text = _("Чтобы изменить напоминание, сначала создайте событие!"),
 			reply_markup = InlineKeyboardsBox.AddNewEvent()
 			)
 		
@@ -533,7 +571,8 @@ def ProcessDeleteReminder(Call: types.CallbackQuery):
 	if CountReminder < 1:
 		Bot.send_message(
 			Call.message.chat.id, 
-			_("Вы не создали ни одного напоминания.")
+			_("Чтобы отключить напоминания, сначала создайте событие!"),
+			reply_markup = InlineKeyboardsBox.AddNewEvent()
 			)
 	else:
 		DeleteMessage = Bot.send_message(
@@ -586,8 +625,8 @@ def ProcessInfo(Call: types.CallbackQuery):
 
 	Bot.send_message(
 		Call.message.chat.id,
-		text = _("@Dnido\\_bot предназначен для запоминания событий и отслеживания, сколько дней до них осталось\\.\n\n1\\) По умолчанию, если вы создаёте событие, то будут активированы *ежедневные напоминания* 🔔\\. Вы их сможете отключить в любой момент в настройках, нажав на \"Удалить напоминание\"\\. Само событие останется\\.\n\n2\\) Даже если вы удалите напоминания, то не переживайте, в день события мы вам всё равно о нём напомним\\! В покое точно не оставим\\! 🤓 Также вы можете установить *разовое напоминание*, например, за 10 дней 📆\\.\n\n_*Пользуйтесь, и не забывайте делиться с друзьями\\!*_"),
-		parse_mode= "MarkdownV2",
+		text = _("@Dnido_bot предназначен для запоминания событий и отслеживания, сколько дней до них осталось.\n\n1) По умолчанию, если вы создаёте событие, то будут активированы <b>ежедневные напоминания</b> 🔔. Вы их сможете отключить в любой момент, нажав на \"Отключить напоминание\" в настройках. Само событие останется.\n\n2) Даже если вы уберете напоминания, то не переживайте, в день события мы вам всё равно о нём напомним! В покое точно не оставим! 🤓 Также вы можете установить <b>разовое напоминание</b>, например, за 10 дней 📆.\n\n<b><i>Пользуйтесь, и не забывайте делиться с друзьями!</i></b>"),
+		parse_mode= "HTML",
 		reply_markup= InlineKeyboardsBox.OK()
 	)
 

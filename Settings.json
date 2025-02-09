@@ -4,6 +4,7 @@
 	"start_remindering": "07:00",
 	"continue_remindering": "07:05",
 	"share_image_path": "",
+	"start_jpg": "",
     "chat_id": null, 
 	"language": "ru"
 	}

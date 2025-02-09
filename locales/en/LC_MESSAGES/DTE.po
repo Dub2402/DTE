@@ -2,8 +2,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
-"POT-Creation-Date: 2025-01-25 14:40+0300\n"
-"PO-Revision-Date: 2025-01-25 14:40+0300\n"
+"POT-Creation-Date: 2025-02-07 22:30+0300\n"
+"PO-Revision-Date: 2025-02-07 23:57+0300\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: en\n"
@@ -52,8 +52,8 @@ msgid "Поделиться"
 msgstr "Share"
 
 #: Source/InlineKeyboards.py:87
-msgid "Просто топовый бот для отсчёта дней до события 🥳"
-msgstr "Just a top bot for time-tracking reminders 🥳"
+msgid "Просто Т-т-топовый бот для отсчёта дней до событий 🥳"
+msgstr "Just a T-t-top chatbot for time-tracking reminders 🥳"
 
 #: Source/InlineKeyboards.py:98
 msgid "Создать событие"
@@ -65,7 +65,7 @@ msgstr "🔕 Deactivate"
 
 #: Source/InlineKeyboards.py:127
 msgid "Сколько дней осталось"
-msgstr "Days left"
+msgstr "Days till"
 
 #: Source/InlineKeyboards.py:131
 msgid "Сколько дней прошло"
@@ -91,19 +91,19 @@ msgstr "Turn on daily reminders"
 msgid "Включить разовое напоминание"
 msgstr "Turn on a one-time reminder"
 
-#: Source/ReplyKeyboard.py:15 main.py:127
+#: Source/ReplyKeyboard.py:15 main.py:135
 msgid "➕ Новое событие"
 msgstr "➕ New event"
 
-#: Source/ReplyKeyboard.py:16 main.py:138
+#: Source/ReplyKeyboard.py:16 main.py:146
 msgid "🗓 Мои события"
 msgstr "🗓 My events"
 
-#: Source/ReplyKeyboard.py:17 main.py:120
+#: Source/ReplyKeyboard.py:17 main.py:128
 msgid "⚙️ Настройки"
 msgstr "⚙️ Settings"
 
-#: Source/ReplyKeyboard.py:18 main.py:228
+#: Source/ReplyKeyboard.py:18 main.py:236
 msgid "📢 Поделиться с друзьями"
 msgstr "📢 Share with friends"
 
@@ -137,12 +137,12 @@ msgstr ""
 "\n"
 "Have a nice day\\!"
 
-#: Source/Thread.py:136 main.py:177 main.py:206
+#: Source/Thread.py:136 main.py:185 main.py:214
 #, python-format
 msgid "*%s* наступит через %s %s\\!"
 msgstr "*%s* is in %s %s\\!"
 
-#: main.py:97
+#: main.py:105
 msgid ""
 "🎉 *Добро пожаловать\\!* 🎉\n"
 "\n"
@@ -154,11 +154,11 @@ msgstr ""
 "I am a chatbot that will remind you about events and let you track the time "
 "left before them\\."
 
-#: main.py:107
+#: main.py:115
 msgid ", мы рады вас видеть снова! 🤗"
 msgstr ", we are happy to see you again! 🤗"
 
-#: main.py:114
+#: main.py:122
 msgid ""
 "Давайте познакомимся!\n"
 "Напишите свое имя! 🤗"
@@ -166,11 +166,11 @@ msgstr ""
 "Let`s get to know each other!\n"
 "Write down your name! 🤗"
 
-#: main.py:125
+#: main.py:133
 msgid "Выберите пункт, который вы хотите настроить:"
 msgstr "Choose the setting you`d like to customize:"
 
-#: main.py:133
+#: main.py:141
 msgid ""
 "Введите, пожалуйста, название события, которое вы так ждёте\\! 😉 \n"
 "\n"
@@ -178,7 +178,7 @@ msgstr ""
 "Please, enter the name of the event you are so expecting\\! 😉\n"
 "\n"
 
-#: main.py:146
+#: main.py:154
 msgid ""
 "Вы не создали ни одного события 🙄\n"
 "Нужно это дело исправить\\!\\)"
@@ -186,58 +186,62 @@ msgstr ""
 "You haven\\`t created any events yet 🙄\n"
 "Let\\`s fix this\\!\\)"
 
-#: main.py:156
+#: main.py:164
 #, python-format
 msgid "Приветствую, %s\\!"
 msgstr "Hello, %s\\!"
 
-#: main.py:169 main.py:198
+#: main.py:177 main.py:206
 #, python-format
 msgid "Ваше событие *%s* сегодня\\."
 msgstr "Your event *%s* today\\."
 
-#: main.py:187 main.py:214
+#: main.py:195 main.py:222
 #, python-format
 msgid "Событие *%s* было %s %s назад\\!"
 msgstr "*%s* was %s %s ago\\!"
 
-#: main.py:221
+#: main.py:229
 msgid "Хорошего тебе дня\\!\\)"
 msgstr "Have a nice day\\!\\)"
 
-#: main.py:235
+#: main.py:243
 msgid ""
 "@Dnido_bot\n"
 "@Dnido_bot\n"
 "@Dnido_bot\n"
 "\n"
-"Просто топовый бот для отсчёта дней до события 🥳"
+"Просто <b>Т-т-топовый</b> бот для отсчёта дней до событий 🥳\n"
+"\n"
+"<b><i>Пользуйся и делись с друзьями!</i></b>"
 msgstr ""
 "@Daystill_bot\n"
 "@Daystill_bot\n"
 "@Daystill_bot\n"
 "\n"
-"A top-notch chatbot for time-tracking reminders 🥳"
+"Just a <b>T-t-top</b> chatbot for time-tracking reminders 🥳\n"
+"\n"
+"<b><i>Use it and share with your friends!</i></b>"
 
-#: main.py:241
+#: main.py:250
 msgid "@namebot"
-msgstr ""
+msgstr "@namebot"
 
-#: main.py:259
+#: main.py:269
 #, python-format
 msgid "Приятно познакомиться, %s! 😎"
 msgstr "Nice to meet you, %s! 😎"
 
-#: main.py:266
+#: main.py:276
 #, python-format
 msgid "Приятно познакомиться, %s!"
 msgstr "Nice to meet you, %s!"
 
-#: main.py:275
+#: main.py:285
 msgid "Для начала работы с ботом создайте своё первое событие! 🙌"
 msgstr "To have the chatbot running, create your first event! 🙌"
 
-#: main.py:297 main.py:486
+#: main.py:307 main.py:502
 #, python-format
 msgid ""
 "Данные сохранены\\!\n"
@@ -252,7 +256,7 @@ msgstr ""
 "\n"
 "Let\\`s be waiting for it together\\! 💪"
 
-#: main.py:305 main.py:479
+#: main.py:315 main.py:495
 #, python-format
 msgid ""
 "Данные сохранены\\!\n"
@@ -263,16 +267,16 @@ msgstr ""
 "\n"
 "Your event *%s* is today\\!\\!\\! 😊"
 
-#: main.py:312
+#: main.py:322
 msgid "Укажите, какой формат отсчёта вам показывать?"
 msgstr "Tell us what countdown format is more preferable?"
 
-#: main.py:322
+#: main.py:332
 msgid "Вы ввели не соответствующую формату дату. Повторите попытку."
 msgstr ""
 "You have entered a date that does not match the format. Please try again!"
 
-#: main.py:331
+#: main.py:341
 msgid ""
 "А теперь мне нужна дата вашего события 🤔 \n"
 "\n"
@@ -282,15 +286,22 @@ msgstr ""
 "\n"
 "_For example_\\: 01\\.01\\.2000"
 
-#: main.py:349
-msgid "Информация принята! ✔️ Будем держать руку на пульсе!"
-msgstr "Your data has been saved! ✔️ We'll keep an eye on everything!"
+#: main.py:362
+msgid ""
+"✅ Информация принята!\n"
+"\n"
+"За <b>$reminder $days</b> мы вам напомним о событии <b>$name</b>!"
+msgstr ""
+"✅ Your data has been saved!\n"
+"\n"
+"We will remind you about the <b>$name</b> event <b>$reminder $days</b> "
+"before! "
 
-#: main.py:353
+#: main.py:369
 msgid "Я не совсем понял, что вы от меня хотите."
 msgstr "I don't quite understand what you want from me."
 
-#: main.py:405
+#: main.py:421
 msgid ""
 "Введите, пожалуйста, название события, которое вы так ждёте\\! 😉 \n"
 "\n"
@@ -300,11 +311,11 @@ msgstr ""
 "\n"
 "_For example_\\: My Birthday"
 
-#: main.py:420 main.py:427
+#: main.py:436 main.py:443
 msgid "Выберите тип напоминания:"
 msgstr "Choose the reminder type:"
 
-#: main.py:455
+#: main.py:471
 #, python-format
 msgid ""
 "Данные сохранены\\!\n"
@@ -315,23 +326,11 @@ msgstr ""
 "\n"
 "*%s* was %s %s ago\\!"
 
-#: main.py:502
+#: main.py:518
 msgid "Выберите событие, для которого вы хотели бы изменить напоминание:"
 msgstr "Choose an event to change a reminder for:"
 
-#: main.py:516
-msgid "Для создания напоминания сначала создайте событие!"
-msgstr "To create a reminder, first create an event!"
-
-#: main.py:536
-msgid "Вы не создали ни одного напоминания."
-msgstr "You haven`t created any reminders."
-
-#: main.py:541
-msgid "Ваши напоминания:"
-msgstr "Your reminders:"
-
-#: main.py:553
+#: main.py:528 main.py:586
 #, python-format
 msgid ""
 "*%s*\n"
@@ -340,7 +339,7 @@ msgstr ""
 "*%s*\n"
 "Daily reminders are set\\!"
 
-#: main.py:564
+#: main.py:539 main.py:597
 #, python-format
 msgid ""
 "*%s*\n"
@@ -349,45 +348,57 @@ msgstr ""
 "*%s*\n"
 "The reminder is set for %s %s\\!"
 
-#: main.py:578
+#: main.py:548
+msgid "Чтобы изменить напоминание, сначала создайте событие!"
+msgstr "To change a reminder, first create an event!"
+
+#: main.py:568
+msgid "Чтобы отключить напоминания, сначала создайте событие!"
+msgstr "To deactivate reminders, first create an event!"
+
+#: main.py:574
+msgid "Ваши напоминания:"
+msgstr "Your reminders:"
+
+#: main.py:611
 msgid "Напишите свое новое имя!"
 msgstr "Enter your new name!"
 
-#: main.py:589
+#: main.py:622
 msgid ""
-"@Dnido\\_bot предназначен для запоминания событий и отслеживания, сколько "
-"дней до них осталось\\.\n"
+"@Dnido_bot предназначен для запоминания событий и отслеживания, сколько дней "
+"до них осталось.\n"
 "\n"
-"1\\) По умолчанию, если вы создаёте событие, то будут активированы "
-"*ежедневные напоминания* 🔔\\. Вы их сможете отключить в любой момент в "
-"настройках, нажав на \"Удалить напоминание\"\\. Само событие останется\\.\n"
+"1) По умолчанию, если вы создаёте событие, то будут активированы "
+"<b>ежедневные напоминания</b> 🔔. Вы их сможете отключить в любой момент, "
+"нажав на \"Отключить напоминание\" в настройках. Само событие останется.\n"
 "\n"
-"2\\) Даже если вы удалите напоминания, то не переживайте, в день события мы "
-"вам всё равно о нём напомним\\! В покое точно не оставим\\! 🤓 Также вы "
-"можете установить *разовое напоминание*, например, за 10 дней 📆\\.\n"
+"2) Даже если вы уберете напоминания, то не переживайте, в день события мы "
+"вам всё равно о нём напомним! В покое точно не оставим! 🤓 Также вы можете "
+"установить <b>разовое напоминание</b>, например, за 10 дней 📆.\n"
 "\n"
-"_*Пользуйтесь, и не забывайте делиться с друзьями\\!*_"
+"<b><i>Пользуйтесь, и не забывайте делиться с друзьями!</i></b>"
 msgstr ""
-"@Daystill\\_bot bot serves to remind you about events and let you track the "
-"time left before them\\.\n"
+"@Daystill_bot bot serves to remind you about events and let you track the "
+"time left before them.\n"
 "\n"
-"1\\) When you create an event, *daily reminders* 🔔 are on by default\\. "
-"You can turn them off any moment in the settings by clicking on \\"
-"\"deactivate reminder\\\"\\. The event itself won\\`t be deleted\\.\n"
+"1) When you create an event, <b>daily reminders</b> 🔔 are on by default. "
+"You can turn them off any moment by clicking on \"Deactivate reminders\" in "
+"the settings. The event itself won`t be deleted.\n"
 "\n"
-"2\\) Even if you delete the reminders, don\\`t worry – we\\`ll send you a "
-"notification on the day of the event anyway\\! We won\\`t let you forget "
-"about it\\! 🤓 You can also set a *one\\-time reminder*, for example, 10 "
-"days before the event 📆\\.\n"
+"2) Even if you delete the reminders, don`t worry – we`ll send you a "
+"notification on the day of the event anyway! We won`t let you forget about "
+"it! 🤓 You can also set a <b>one-time reminder</b>,  for example, 10 days "
+"before the event 📆.\n"
 "\n"
-"_*Use it with pleasure and share with your friends\\!*_"
+"<b><i>Use it with pleasure and share with your friends!</i></b>"
 
-#: main.py:610
+#: main.py:643
 #, python-format
 msgid "Для события *%s* ежедневные напоминания включены\\!"
 msgstr "Daily reminders for the event *%s* are on\\!"
 
-#: main.py:630
+#: main.py:663
 #, python-format
 msgid ""
 "Укажите, за сколько дней вам напомнить о событии *%s*? 🔊\n"
@@ -398,7 +409,7 @@ msgstr ""
 "\n"
 "_For example_\\: 10"
 
-#: main.py:651
+#: main.py:684
 #, python-format
 msgid ""
 "Для события *%s* напоминания отключены\\!\n"
@@ -408,6 +419,9 @@ msgstr ""
 "Reminders are off for the event *%s*\\!\n"
 "\n"
 "But don't worry\\! On the right day, we will notify you about it anyway\\! 🛎"
+
+#~ msgid "Вы не создали ни одного напоминания."
+#~ msgstr "You haven`t created any reminders."
 
 #~ msgid "дней"
 #~ msgstr "days"
