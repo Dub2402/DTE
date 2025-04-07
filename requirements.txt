@@ -1,4 +1,4 @@
-dublib == 0.14.1
+dublib == 0.16.2
 pytelegrambotapi
 apscheduler
 dateparser

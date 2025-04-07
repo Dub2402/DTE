@@ -1,4 +1,4 @@
-from dublib.Methods.JSON import ReadJSON
+from dublib.Methods.Filesystem import ReadJSON
 
 from datetime import date
 import dateparser
@@ -18,6 +18,34 @@ def CheckValidDate(Date: str)-> bool:
 	except:
 		return False
 	
+def GetFreeID(Events: dict) -> int:
+	Increment = list()
+	for key in Events.keys(): Increment.append(int(key))
+	Increment.sort()
+	FreeID = 1
+	if Increment: FreeID = max(Increment) + 1
+
+	return FreeID
+
+def Calculator(event: str) -> int:
+	today = date.today()
+	remains = (dateparser.parse(event, settings={'DATE_ORDER': 'DMY'}).date() - today).days
+	
+	return remains
+
+def FormatDays(remains: int, language : str) -> str:
+	if language == "en":
+		days = "days"
+		if remains in [1]: days = "day"	
+
+	else:
+		days = "дней"
+		if remains in [11, 12, 13]: pass
+		elif str(remains).endswith("1") and remains not in [11, 12, 13]: days = "день"
+		elif str(remains).endswith("2") or str(remains).endswith("3") or str(remains).endswith("4") and remains not in [11, 12, 13]: days = "дня"
+			
+	return days
+
 def Skinwalker(event: str) -> str:
 
 	yearnew = int(date.today().year) + 1 
@@ -30,33 +58,3 @@ def Skinwalker(event: str) -> str:
 		newevent = str(day) + "." + str(month) + "." + str(yearnew)
 
 	return newevent
-
-def Calculator(event: str) -> int:
-	today = date.today()
-	remains = (dateparser.parse(event, settings={'DATE_ORDER': 'DMY'}).date() - today).days
-	
-	return remains
-
-def GetFreeID(Events: dict) -> int:
-	Increment = list()
-	for key in Events.keys(): Increment.append(int(key))
-	Increment.sort()
-	FreeID = 1
-	if Increment: FreeID = max(Increment) + 1
-
-	return FreeID
-
-def FormatDays(remains: int, language : str) -> str:
-	if language == "en":
-		days = "days"
-	
-		if remains in [1]: days = "day"	
-
-	else:
-		days = "дней"
-		
-		if remains in [11, 12, 13]: pass
-		elif str(remains).endswith("1") and remains not in [11, 12, 13]: days = "день"
-		elif str(remains).endswith("2") or str(remains).endswith("3") or str(remains).endswith("4") and remains not in [11, 12, 13]: days = "дня"
-			
-	return days

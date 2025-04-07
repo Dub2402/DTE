@@ -57,12 +57,6 @@ pip install -r requirements.txt
 Время начала ежедневного уведомления пользователей.
 
 ```JSON
-"continue_remindering": "07:05"
-```
-
-Время начала дополнительного уведомления пользователей.
-
-```JSON
 "share_image_path": "",
 ```
 
