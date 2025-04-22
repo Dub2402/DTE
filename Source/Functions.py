@@ -1,8 +1,11 @@
 from dublib.Methods.Filesystem import ReadJSON
+from dublib.TelebotUtils import UserData
 
 from datetime import date
 import dateparser
 import gettext
+import telebot
+from telebot import types
 
 Settings = ReadJSON("Settings.json")
 Language = Settings["language"]
@@ -58,3 +61,26 @@ def Skinwalker(event: str) -> str:
 		newevent = str(day) + "." + str(month) + "." + str(yearnew)
 
 	return newevent
+
+
+def DeleteMessageNotificationsDeactivate(User: UserData, Call: types.CallbackQuery, Bot: telebot.TeleBot):
+	if User.has_property("MessageNotificationsDeactivate"):
+		try:
+			MessageNotifications = User.get_property("MessageNotificationsDeactivate")
+			for MessageNotification in MessageNotifications:
+				Bot.delete_message(Call.message.chat.id, MessageNotification)
+		except: print("Ошибка удаления сообщения.")
+		if User.has_property("ID_DelMessage"):
+			try:
+				ID_DelMessage = User.get_property("ID_DelMessage")
+				Bot.delete_message(Call.message.chat.id, ID_DelMessage)
+			except: print("Ошибка удаления сообщения ID_DelMessage.")
+
+def DeleteMessageNotificationsChange(User: UserData, Call: types.CallbackQuery, Bot: telebot.TeleBot):
+	if User.has_property("MessageNotificationsChange"):
+		print(Call.message.chat.id)
+		try:
+			MessageNotifications = User.get_property("MessageNotificationsChange")
+			for MessageNotification in MessageNotifications:
+				Bot.delete_message(Call.message.chat.id, MessageNotification)
+		except: print("Ошибка удаления сообщения.")

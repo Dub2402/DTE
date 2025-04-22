@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
-"POT-Creation-Date: 2025-04-07 17:05+0300\n"
+"POT-Creation-Date: 2025-04-19 17:01+0300\n"
 "PO-Revision-Date: 2024-11-08 20:33+0300\n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -19,8 +19,8 @@ msgstr ""
 msgid "🔕 Отключить напоминания"
 msgstr ""
 
-#: Source/InlineKeyboards.py:16 Source/InlineKeyboards.py:46
-msgid "🔔 Изменить напоминание"
+#: Source/InlineKeyboards.py:16
+msgid "🔔 Изменить напоминания"
 msgstr ""
 
 #: Source/InlineKeyboards.py:17
@@ -31,13 +31,17 @@ msgstr ""
 msgid "ℹ️ Инфа"
 msgstr ""
 
-#: Source/InlineKeyboards.py:19 Source/InlineKeyboards.py:135
-#: Source/InlineKeyboards.py:177 main.py:422 main.py:520
+#: Source/InlineKeyboards.py:19 Source/InlineKeyboards.py:134
+#: Source/InlineKeyboards.py:176 main.py:427 main.py:526
 msgid "🔙 Назад"
 msgstr ""
 
 #: Source/InlineKeyboards.py:31
 msgid "🔕 Отключить"
+msgstr ""
+
+#: Source/InlineKeyboards.py:46
+msgid "🔔 Изменить напоминание"
 msgstr ""
 
 #: Source/InlineKeyboards.py:60
@@ -52,47 +56,67 @@ msgstr ""
 msgid "Удалить"
 msgstr ""
 
-#: Source/InlineKeyboards.py:115
+#: Source/InlineKeyboards.py:114
 msgid "Настроить напоминания"
 msgstr ""
 
-#: Source/InlineKeyboards.py:119
+#: Source/InlineKeyboards.py:118
 msgid "Спасибо, все супер!"
 msgstr ""
 
-#: Source/InlineKeyboards.py:132
+#: Source/InlineKeyboards.py:131
 msgid "Поделиться"
 msgstr ""
 
-#: Source/InlineKeyboards.py:133
+#: Source/InlineKeyboards.py:132
 msgid "Просто Т-т-топовый бот для отсчёта дней до событий 🥳"
 msgstr ""
 
-#: Source/InlineKeyboards.py:147
+#: Source/InlineKeyboards.py:146
 msgid "Сколько дней осталось"
 msgstr ""
 
-#: Source/InlineKeyboards.py:151
+#: Source/InlineKeyboards.py:150
 msgid "Сколько дней прошло"
 msgstr ""
 
-#: Source/InlineKeyboards.py:170
+#: Source/InlineKeyboards.py:169
 msgid "Создать разовое напоминание"
 msgstr ""
 
-#: Source/InlineKeyboards.py:174 Source/InlineKeyboards.py:198
+#: Source/InlineKeyboards.py:173 Source/InlineKeyboards.py:197
 msgid "Без напоминаний"
 msgstr ""
 
-#: Source/InlineKeyboards.py:190
+#: Source/InlineKeyboards.py:189
 msgid "Включить ежедневные напоминания"
 msgstr ""
 
-#: Source/InlineKeyboards.py:194
+#: Source/InlineKeyboards.py:193
 msgid "Включить разовое напоминание"
 msgstr ""
 
-#: Source/Mailer.py:112 Source/Thread.py:136 main.py:149 main.py:177
+#: Source/InlineKeyboards.py:212
+msgid "Да"
+msgstr ""
+
+#: Source/InlineKeyboards.py:216
+msgid "Нет"
+msgstr ""
+
+#: Source/InlineKeyboards.py:230
+msgid "Спасибо!"
+msgstr ""
+
+#: Source/InlineKeyboards.py:244
+msgid "Спасибо, я передумал!"
+msgstr ""
+
+#: Source/InlineKeyboards.py:272
+msgid "Спасибо"
+msgstr ""
+
+#: Source/Mailer.py:112 Source/Thread.py:136 main.py:150 main.py:178
 #, python-format
 msgid "*%s* наступит через %s %s\\!"
 msgstr ""
@@ -117,23 +141,23 @@ msgid ""
 "Не забудьте\\!\\)"
 msgstr ""
 
-#: Source/ReplyKeyboard.py:15 main.py:88
+#: Source/ReplyKeyboard.py:15 main.py:89
 msgid "➕ Новое событие"
 msgstr ""
 
-#: Source/ReplyKeyboard.py:16 main.py:110
+#: Source/ReplyKeyboard.py:16 main.py:111
 msgid "🗓 Мои события"
 msgstr ""
 
-#: Source/ReplyKeyboard.py:17 main.py:100
-msgid "⚙️ Настройки"
+#: Source/ReplyKeyboard.py:17 main.py:101
+msgid "🛎 Настройка напоминаний"
 msgstr ""
 
-#: Source/ReplyKeyboard.py:18 main.py:192
+#: Source/ReplyKeyboard.py:18 main.py:193
 msgid "📢 Поделиться с друзьями"
 msgstr ""
 
-#: main.py:60 main.py:66
+#: main.py:61 main.py:67
 msgid ""
 "🎉 *Добро пожаловать\\!* 🎉\n"
 "\n"
@@ -141,52 +165,52 @@ msgid ""
 "осталось\\."
 msgstr ""
 
-#: main.py:75
+#: main.py:76
 msgid ", мы рады тебя видеть снова! 🤗"
 msgstr ""
 
-#: main.py:82
+#: main.py:83
 msgid ""
 "Давайте познакомимся!\n"
 "Напишите свое имя! 🤗"
 msgstr ""
 
-#: main.py:94
+#: main.py:95
 msgid ""
 "Введите, пожалуйста, название события, которое вы так ждёте\\! 😉 \n"
 "\n"
 msgstr ""
 
-#: main.py:96 main.py:342
+#: main.py:97 main.py:347
 msgid "Cпасибо, чуть позже!"
 msgstr ""
 
-#: main.py:106
+#: main.py:107
 msgid "Выберите пункт, который вы хотите настроить:"
 msgstr ""
 
-#: main.py:118
+#: main.py:119
 msgid ""
 "Вы не создали ни одного события 🙄\n"
 "Нужно это дело исправить\\!\\)"
 msgstr ""
 
-#: main.py:128
+#: main.py:129
 #, python-format
 msgid "Приветствую, %s\\!"
 msgstr ""
 
-#: main.py:141 main.py:169
+#: main.py:142 main.py:170
 #, python-format
 msgid "Ваше событие *%s* сегодня\\."
 msgstr ""
 
-#: main.py:158
+#: main.py:159
 #, python-format
 msgid "Событие *%s* было %s %s назад\\!"
 msgstr ""
 
-#: main.py:185
+#: main.py:186
 msgid "Хорошего тебе дня\\!\\)"
 msgstr ""
 
@@ -210,23 +234,23 @@ msgstr ""
 msgid "Приятно познакомиться, %s! 😎"
 msgstr ""
 
-#: main.py:233
+#: main.py:232
 #, python-format
 msgid "Приятно познакомиться, %s!"
 msgstr ""
 
-#: main.py:242
+#: main.py:241
 msgid "Для начала работы с ботом создайте своё первое событие! 🙌"
 msgstr ""
 
-#: main.py:252
+#: main.py:251
 msgid ""
 "А теперь мне нужна дата вашего события 🤔 \n"
 "\n"
 "_Пример_\\: 01\\.01\\.2000"
 msgstr ""
 
-#: main.py:276 main.py:576
+#: main.py:276 main.py:582
 msgid ""
 "Данные сохранены\\!\n"
 "\n"
@@ -235,7 +259,7 @@ msgid ""
 "Будем ждать его вместе с __ежедневными напоминаниями__\\! 🛎"
 msgstr ""
 
-#: main.py:285 main.py:569
+#: main.py:285 main.py:575
 #, python-format
 msgid ""
 "Данные сохранены\\!\n"
@@ -251,70 +275,70 @@ msgstr ""
 msgid "Вы ввели не соответствующую формату дату. Повторите попытку."
 msgstr ""
 
-#: main.py:322
+#: main.py:324
 msgid ""
 "✅ Информация принята!\n"
 "\n"
 "За <b>$reminder $days</b> мы вам напомним о событии <b>$name</b>!"
 msgstr ""
 
-#: main.py:329
+#: main.py:334
 msgid "Я не совсем понял, что вы от меня хотите."
 msgstr ""
 
-#: main.py:340
+#: main.py:345
 msgid ""
 "Введите, пожалуйста, название события, которое вы так ждёте\\! 😉 \n"
 "\n"
 "_Например_\\: День рождения"
 msgstr ""
 
-#: main.py:380
+#: main.py:385
 msgid "У вас все напоминания уже отключены!"
 msgstr ""
 
-#: main.py:386
-msgid "Ваши напоминания:"
+#: main.py:391
+msgid "ВАШИ НАПОМИНАНИЯ:"
 msgstr ""
 
-#: main.py:395 main.py:478
+#: main.py:400 main.py:484
 #, python-format
 msgid ""
 "*%s*\n"
 "Установлены ежедневные напоминания\\!"
 msgstr ""
 
-#: main.py:406 main.py:489
+#: main.py:411 main.py:495
 #, python-format
 msgid ""
 "*%s*\n"
 "Напоминание установлено за %s %s\\!"
 msgstr ""
 
-#: main.py:414
+#: main.py:419
 msgid "Чтобы отключить напоминания, сначала создайте событие!"
 msgstr ""
 
-#: main.py:421 main.py:519
-msgid "Для выхода в меню настроек нажмите <b>\"Назад\"</b>:"
+#: main.py:426 main.py:525
+msgid "Для выхода в предыдущее меню нажмите <b>\"Назад\"</b>:"
 msgstr ""
 
-#: main.py:469
-msgid "Выберите событие, для которого вы хотели бы изменить напоминание:"
+#: main.py:475
+msgid "ВАШИ СОБЫТИЯ:"
 msgstr ""
 
-#: main.py:497
+#: main.py:503
 #, python-format
 msgid ""
 "*%s*\n"
 "Напоминание отключено\\!"
 msgstr ""
 
-#: main.py:504 main.py:512
+#: main.py:510 main.py:518
 msgid "Чтобы изменить напоминание, сначала создайте событие!"
 msgstr ""
 
-#: main.py:544
+#: main.py:550
 #, python-format
 msgid ""
 "Данные сохранены\\!\n"
@@ -322,16 +346,16 @@ msgid ""
 "Ваше событие *%s* произошло %s %s назад\\!"
 msgstr ""
 
-#: main.py:591 main.py:598
+#: main.py:600 main.py:610
 msgid "Выберите тип напоминания:"
 msgstr ""
 
-#: main.py:620
+#: main.py:632
 #, python-format
 msgid "Для события *%s* ежедневные напоминания включены\\!"
 msgstr ""
 
-#: main.py:640
+#: main.py:656
 #, python-format
 msgid ""
 "Укажите, за сколько дней вам напомнить о событии *%s*? 🔊\n"
@@ -339,7 +363,12 @@ msgid ""
 "_Пример_\\: 10"
 msgstr ""
 
-#: main.py:661
+#: main.py:677
+#, python-format
+msgid "Вы хотите отключить все напоминания для события *%s*?"
+msgstr ""
+
+#: main.py:703
 #, python-format
 msgid ""
 "Для события *%s* напоминания отключены\\!\n"
@@ -347,15 +376,15 @@ msgid ""
 "Но не переживайте\\! День в день мы вас все равно о нём уведомим\\! 🛎"
 msgstr ""
 
-#: main.py:673
+#: main.py:719
 msgid "Напишите свое новое имя!"
 msgstr ""
 
-#: main.py:674
+#: main.py:720
 msgid "Спасибо, в другой раз!"
 msgstr ""
 
-#: main.py:685
+#: main.py:731
 msgid ""
 "@Dnido_bot предназначен для запоминания событий и отслеживания, сколько "
 "дней до них осталось.\n"
@@ -371,7 +400,7 @@ msgid ""
 "<b><i>Пользуйтесь, и не забывайте делиться с друзьями!</i></b>"
 msgstr ""
 
-#: main.py:741
+#: main.py:771
 msgid ""
 "И вам спасибо!\n"
 "Хорошего дня! ))"

@@ -7,14 +7,14 @@ class ReplyKeyboard:
 	def __init__(self):
 		pass
 
-	def AddMenu(self, user: UserData) -> types.ReplyKeyboardMarkup:
+	def AddMenu(self) -> types.ReplyKeyboardMarkup:
 		# Кнопочное меню.
 		Menu = types.ReplyKeyboardMarkup(resize_keyboard = True)
 
 		# Генерация кнопок.
 		CreateEvent = types.KeyboardButton(_("➕ Новое событие"))
 		ListEvents = types.KeyboardButton(_("🗓 Мои события"))
-		List = types.KeyboardButton(_("⚙️ Настройки"))
+		List = types.KeyboardButton(_("🛎 Настройка напоминаний"))
 		Share = types.KeyboardButton(_("📢 Поделиться с друзьями"))
 
 		# Добавление кнопок в меню.

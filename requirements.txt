@@ -1,4 +1,4 @@
-dublib == 0.16.2
-pytelegrambotapi
+-r Source/TeleBotAdminPanel/requirements.txt
+dublib == 0.18.1
 apscheduler
 dateparser

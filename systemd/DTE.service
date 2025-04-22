@@ -1,9 +1,9 @@
 # Скрипт инициализации сервиса DTE.
 #==========================================================================================#
-# Application Directory – путь к директории со скриптом.
+# {Application Directory} – путь к директории со скриптом.
 
 [Unit]
-Description=DTE
+Description = A Telegram bot that helps remember events and find out how many days are left until they happen.
 After=network.target
 
 [Service]

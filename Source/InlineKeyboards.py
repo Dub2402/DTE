@@ -13,7 +13,7 @@ class InlineKeyboard:
 
 		# Генерация кнопок.
 		DeleteReminder = types.InlineKeyboardButton(_("🔕 Отключить напоминания"), callback_data = f"Delete_reminder")
-		ChangeReminder = types.InlineKeyboardButton(_("🔔 Изменить напоминание"), callback_data = f"Change_reminder")
+		ChangeReminder = types.InlineKeyboardButton(_("🔔 Изменить напоминания"), callback_data = f"Change_reminder")
 		Сhange = types.InlineKeyboardButton(_("🔁 Изменить имя"), callback_data = f"Change_name")
 		Info = types.InlineKeyboardButton(_("ℹ️ Инфа"), callback_data = f"Info")
 		Return = types.InlineKeyboardButton(_("🔙 Назад"), callback_data = f"Return")
@@ -105,7 +105,6 @@ class InlineKeyboard:
 
 		return Menu
 
-
 	def ChoiceReminderForNewEvent(self, EventID: int) -> types.InlineKeyboardMarkup:
 		# Кнопочное меню.
 		Menu = types.InlineKeyboardMarkup()
@@ -168,11 +167,11 @@ class InlineKeyboard:
 		# 	)
 		OnceReminder = types.InlineKeyboardButton(
 			_("Создать разовое напоминание"), 
-			callback_data = "once_reminder"
+			callback_data = "once_reminder_new"
 			)
 		WithOutReminders = types.InlineKeyboardButton(
 			_("Без напоминаний"), 
-			callback_data = "without_reminders"
+			callback_data = "without_reminders_new"
 			)
 		Back = types.InlineKeyboardButton(_("🔙 Назад"), callback_data = f"Back")
 
@@ -202,4 +201,79 @@ class InlineKeyboard:
 		# Добавление кнопок в меню.
 		Menu.add(EveryDayReminders, OnceReminder, WithOutReminders, row_width = 1)
 		
+		return Menu
+	
+	def ConfirmationWithoutNotifications(self) -> types.InlineKeyboardMarkup:
+		# Кнопочное меню.
+		Menu = types.InlineKeyboardMarkup()
+		
+		# Генерация кнопок.
+		Yes = types.InlineKeyboardButton(
+			_("Да"), 
+			callback_data = "ConfirmationWithoutNotifications"
+			)
+		No = types.InlineKeyboardButton(
+			_("Нет"), 
+			callback_data = "Back"
+			)
+
+		# Добавление кнопок в меню.
+		Menu.add(Yes, No, row_width = 2)
+		
+		return Menu
+	
+	def Thanks(self) -> types.InlineKeyboardMarkup:
+		# Кнопочное меню.
+		Menu = types.InlineKeyboardMarkup()
+
+		Thanks = types.InlineKeyboardButton(
+			_("Спасибо!"), 
+			callback_data = f"Thanks"
+			)
+		
+		# Добавление кнопок в меню.
+		Menu.add(Thanks, row_width =1)
+
+		return Menu
+	
+	def ChangedMind(self) -> types.InlineKeyboardMarkup:
+		# Кнопочное меню.
+		Menu = types.InlineKeyboardMarkup()
+
+		Thanks = types.InlineKeyboardButton(
+			_("Спасибо, я передумал!"), 
+			callback_data = f"Back"
+			)
+		
+		# Добавление кнопок в меню.
+		Menu.add(Thanks, row_width =1)
+
+		return Menu
+	
+	def SendEmoji(self, Emoji: str) -> types.InlineKeyboardMarkup:
+		# Кнопочное меню.
+		Menu = types.InlineKeyboardMarkup()
+
+		Emoji = types.InlineKeyboardButton(
+			(Emoji), 
+			callback_data = f"Emoji_{Emoji}"
+			)
+		
+		# Добавление кнопок в меню.
+		Menu.add(Emoji, row_width =1)
+
+		return Menu
+
+	def ThanksWithUpdate(self) -> types.InlineKeyboardMarkup:
+		# Кнопочное меню.
+		Menu = types.InlineKeyboardMarkup()
+
+		ThanksWithUpdate = types.InlineKeyboardButton(
+			_("Спасибо"), 
+			callback_data = "Update"
+			)
+		
+		# Добавление кнопок в меню.
+		Menu.add(ThanksWithUpdate, row_width =1)
+
 		return Menu

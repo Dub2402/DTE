@@ -1,20 +1,22 @@
-from Source.Functions import Calculator, CheckValidDate, GetFreeID, FormatDays, Skinwalker, _
-from Source.AdminPanel import Panel
+from Source.Functions import Calculator, CheckValidDate, GetFreeID, FormatDays, Skinwalker, _, DeleteMessageNotificationsDeactivate, DeleteMessageNotificationsChange
+from Source.TeleBotAdminPanel import Panel
 from Source.InlineKeyboards import InlineKeyboard
 from Source.ReplyKeyboard import ReplyKeyboard
 from Source.Mailer import Mailer
 
 from dublib.Methods.Filesystem import ReadJSON
 from dublib.Methods.System import CheckPythonMinimalVersion, Clear
-from dublib.TelebotUtils import UsersManager
+from dublib.TelebotUtils import UsersManager, UserData
 from dublib.TelebotUtils.Cache import TeleCache
 from dublib.Polyglot import Markdown
 
 import telebot
+import logging
 from telebot import types
 from time import sleep
 from apscheduler.schedulers.background import BackgroundScheduler
-import logging
+from telebot.types import ReactionTypeEmoji
+from telebot.types import CallbackQuery
 
 CheckPythonMinimalVersion(3, 10)
 Clear()
@@ -52,11 +54,10 @@ def ProcessCommandStart(Message: types.Message):
 	User.set_expected_type(None)
 	
 	try:
-		File = Cacher.get_cached_file(Settings["start_jpg"], type = types.InputMediaPhoto)
-		StartID = Cacher[Settings["start_jpg"]]
+		StartID = Cacher.get_real_cached_file(Settings["start_jpg"], types.InputMediaPhoto)
 		Bot.send_photo(
 			Message.chat.id, 
-			photo = StartID,
+			photo = StartID.file_id,
 			caption = _("🎉 *Добро пожаловать\\!* 🎉\n\nЯ бот, помогающий запоминать события и узнавать, сколько дней до них осталось\\."),
 			parse_mode = "MarkdownV2"
 		)
@@ -73,7 +74,7 @@ def ProcessCommandStart(Message: types.Message):
 		Bot.send_message(
 			Message.chat.id, 
 			call + _(", мы рады тебя видеть снова! 🤗"),
-			reply_markup = reply_keyboard.AddMenu(User)
+			reply_markup = reply_keyboard.AddMenu()
 			)
 		
 	except KeyError:
@@ -97,7 +98,7 @@ def ProcessTextNewEvent(Message: types.Message):
 		)
 	User.set_expected_type("name")	
 
-@Bot.message_handler(content_types = ["text"], regexp = _("⚙️ Настройки"))
+@Bot.message_handler(content_types = ["text"], regexp = _("🛎 Настройка напоминаний"))
 def ProcessTextReminders(Message: types.Message):
 	User = Manager.auth(Message.from_user)
 	
@@ -193,11 +194,10 @@ def ProcessTextMyEvents(Message: types.Message):
 def ProcessShareWithFriends(Message: types.Message):
 	User = Manager.auth(Message.from_user)
 	try:
-		File = Cacher.get_cached_file(Settings["share_image_path"], type = types.InputMediaPhoto)
-		ShareID = Cacher[Settings["share_image_path"]]
+		ShareID = Cacher.get_real_cached_file(Settings["share_image_path"], types.InputMediaPhoto)
 		Bot.send_photo(
 			Message.chat.id, 
-			photo = ShareID,
+			photo = ShareID.file_id,
 			caption = _("@Dnido_bot\n@Dnido_bot\n@Dnido_bot\n\nПросто <b>Т-т-топовый</b> бот для отсчёта дней до событий 🥳\n\n<b><i>Пользуйся и делись с друзьями!</i></b>"), 
 			reply_markup = inline_keyboard.AddShare(),
 			parse_mode = "HTML" 
@@ -224,15 +224,14 @@ def ProcessText(Message: types.Message):
 			Bot.send_message(
 				Message.chat.id,
 				_("Приятно познакомиться, %s! 😎") % Message.text,
-			reply_markup = reply_keyboard.AddMenu(User), 
-			
-			)
+				reply_markup = inline_keyboard.SendEmoji("🤗")
+				)
 		else: 
 			Bot.send_message(
 				Message.chat.id,
 				_("Приятно познакомиться, %s!") % Message.text,
-			reply_markup = reply_keyboard.AddMenu(User)
-			)
+				reply_markup = reply_keyboard.AddMenu()
+				)
 			User.clear_temp_properties()
 			sleep(0.1)
 
@@ -259,6 +258,7 @@ def ProcessText(Message: types.Message):
 	if User.expected_type == "date":
 		name = Markdown(User.get_property("date")).escaped_text
 		if CheckValidDate(Message.text) == True:
+			User.set_property("New", True)
 			Events = User.get_property("events")
 			FreeID = str(GetFreeID(Events))
 			
@@ -307,6 +307,8 @@ def ProcessText(Message: types.Message):
 	if User.expected_type == "reminder":
 		
 		if Message.text.isdigit() and int(Message.text) >= 1 and int(Message.text) <= 366:
+			if User.has_property("MessageNotificationsChange"):
+				Delete_List = User.get_property("MessageNotificationsChange")
 			Event: dict = User.get_property("events")
 			EventID = User.get_property("EventsID")
 			Event[EventID]["Reminder"] = Message.text
@@ -317,11 +319,14 @@ def ProcessText(Message: types.Message):
 			Name = User.get_property("events")[EventID]["Name"]
 			Reminder = User.get_property("events")[EventID]["Reminder"]
 			days = FormatDays(Reminder, Settings["language"])
-			Bot.send_message(
+			DeleteMessageNotification = Bot.send_message(
 				Message.chat.id,
 				_("✅ Информация принята!\n\nЗа <b>$reminder $days</b> мы вам напомним о событии <b>$name</b>!").replace("$reminder", str(Reminder)).replace("$name", Name).replace("$days", days),
+				reply_markup = inline_keyboard.Thanks(),
 				parse_mode = "HTML"
 			)
+			Delete_List.append(DeleteMessageNotification.id)
+			User.set_property("MessageNotificationsChange", Delete_List)
 			
 		else:
 			Bot.send_message(
@@ -383,7 +388,7 @@ def ProcessDeleteReminder(Call: types.CallbackQuery):
 		else:
 			DeleteMessage = Bot.send_message(
 						Call.message.chat.id,
-						_("Ваши напоминания:"))
+						_("ВАШИ НАПОМИНАНИЯ:"))
 			User.set_temp_property("ID_DelMessage", DeleteMessage.id)
 
 			for EventID in somedict.keys():
@@ -418,7 +423,7 @@ def ProcessDeleteReminder(Call: types.CallbackQuery):
 	
 	DeleteMessageNotification = Bot.send_message(
 		Call.message.chat.id,
-		_("Для выхода в меню настроек нажмите <b>\"Назад\"</b>:"),
+		_("Для выхода в предыдущее меню нажмите <b>\"Назад\"</b>:"),
 		reply_markup = inline_keyboard.DeleteMessage(_("🔙 Назад"), "Deactivate"),
 		parse_mode = "HTML"
 		)
@@ -453,8 +458,9 @@ def InlineButtonRemoveReminder(Call: types.CallbackQuery):
 	Bot.answer_callback_query(Call.id)
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Change_reminder"))
-def ProcessTextNewReminder(Call: types.CallbackQuery):
+def ProcessChange_reminders(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
+	User.set_property("New", False)
 	CountRemained = 0
 	Delete_List = []
 	somedict = User.get_property("events").copy()
@@ -466,7 +472,7 @@ def ProcessTextNewReminder(Call: types.CallbackQuery):
 		if CountRemained >= 1:
 			DeleteMessageNotification = Bot.send_message(
 				Call.message.chat.id, 
-				_("Выберите событие, для которого вы хотели бы изменить напоминание:"))
+				_("ВАШИ СОБЫТИЯ:"))
 			Delete_List.append(DeleteMessageNotification.id)
 				
 			for EventID in somedict.keys():
@@ -516,7 +522,7 @@ def ProcessTextNewReminder(Call: types.CallbackQuery):
 
 	DeleteMessageNotification = Bot.send_message(
 		Call.message.chat.id,
-		_("Для выхода в меню настроек нажмите <b>\"Назад\"</b>:"),
+		_("Для выхода в предыдущее меню нажмите <b>\"Назад\"</b>:"),
 		reply_markup = inline_keyboard.DeleteMessage(_("🔙 Назад"), "Change"),
 		parse_mode = "HTML"
 		)
@@ -584,13 +590,19 @@ def InlineButtonRemainedDays(Call: types.CallbackQuery):
 def InlineButtonChoiceEventToAddReminder(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
 
+	if User.has_property("MessageNotificationsChange"):
+		Delete_List = User.get_property("MessageNotificationsChange")
+
 	if Call.data.count("_") == 2:
 		EventsID = Call.data.split("_")[-1]
-		Bot.send_message(
+		DeleteMessageNotification = Bot.send_message(
 			Call.message.chat.id,
 			_("Выберите тип напоминания:"),
 			reply_markup = inline_keyboard.ChoiceFormatReminderChange(User)
 		)
+		Delete_List.append(DeleteMessageNotification.id)
+		User.set_property("MessageNotificationsChange", Delete_List)
+
 	else: 
 		EventsID = Call.data.split("_")[-2]
 		Bot.send_message(
@@ -618,14 +630,18 @@ def ProcessEveryDayReminders(Call: types.CallbackQuery):
 	Bot.send_message(
 		Call.message.chat.id,
 		_("Для события *%s* ежедневные напоминания включены\\!") % Name,
-		parse_mode = "MarkdownV2"
+		parse_mode = "MarkdownV2",
+		reply_markup = inline_keyboard.ThanksWithUpdate()
 		)
-	
 	Bot.answer_callback_query(Call.id)
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("once_reminder"))
 def ProcessOnceDayReminders(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
+
+	if Call.data.count("_") == 2: User.set_property("New", True)
+	if User.has_property("MessageNotificationsChange"):
+		Delete_List = User.get_property("MessageNotificationsChange") 
 
 	Events: dict = User.get_property("events")
 	EventID = User.get_property("EventsID")
@@ -635,11 +651,15 @@ def ProcessOnceDayReminders(Call: types.CallbackQuery):
 
 	Name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
 
-	Bot.send_message(
+	DeleteMessageNotification = Bot.send_message(
 		Call.message.chat.id,
 			_("Укажите, за сколько дней вам напомнить о событии *%s*? 🔊\n\n_Пример_\\: 10") % Name,
+			reply_markup = inline_keyboard.ChangedMind(),
 			parse_mode = "MarkdownV2"
 		)
+	Delete_List.append(DeleteMessageNotification.id)
+	User.set_property("MessageNotificationsChange", Delete_List)
+
 	User.set_expected_type("reminder")
 	
 	Bot.answer_callback_query(Call.id)
@@ -647,6 +667,28 @@ def ProcessOnceDayReminders(Call: types.CallbackQuery):
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("without_reminders"))
 def ProcessWithoutReminders(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
+	if Call.data.count("_") == 2: User.set_property("New", True)
+	if User.has_property("MessageNotificationsChange"):
+		Delete_List = User.get_property("MessageNotificationsChange") 
+	EventID = User.get_property("EventsID")
+	Name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
+	DeleteMessageNotification = Bot.send_message(
+		Call.message.chat.id,
+		_("Вы хотите отключить все напоминания для события *%s*?") % Name,
+		reply_markup = inline_keyboard.ConfirmationWithoutNotifications(),
+		parse_mode = "MarkdownV2"
+		)
+	Delete_List.append(DeleteMessageNotification.id)
+	User.set_property("MessageNotificationsChange", Delete_List)
+	
+	Bot.answer_callback_query(Call.id)
+
+@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("ConfirmationWithoutNotifications"))
+def ProcessWithoutReminders(Call: types.CallbackQuery):
+	User = Manager.auth(Call.from_user)
+
+	if User.has_property("MessageNotificationsChange"):
+		Delete_List = User.get_property("MessageNotificationsChange") 
 
 	Events: dict = User.get_property("events")
 	EventID = User.get_property("EventsID")
@@ -656,11 +698,15 @@ def ProcessWithoutReminders(Call: types.CallbackQuery):
 
 	Name = Markdown(User.get_property("events")[EventID]["Name"]).escaped_text
 
-	Bot.send_message(
+	DeleteMessageNotification =Bot.send_message(
 		Call.message.chat.id,
 			_("Для события *%s* напоминания отключены\\!\n\nНо не переживайте\\! День в день мы вас все равно о нём уведомим\\! 🛎") % Name,
+			reply_markup = inline_keyboard.Thanks(),
 			parse_mode = "MarkdownV2"
 		)
+	
+	Delete_List.append(DeleteMessageNotification.id)
+	User.set_property("MessageNotificationsChange", Delete_List)
 	
 	Bot.answer_callback_query(Call.id)
 
@@ -704,32 +750,16 @@ def ProcessWithoutReminders(Call: types.CallbackQuery):
 	Bot.answer_callback_query(Call.id)
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Back"))
-def ProcessWithoutReminders(Call: types.CallbackQuery):
+def DeleteMessageNotifications(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
 	object = Call.data.split("_")[-1]
 	Bot.delete_message(Call.message.chat.id, Call.message.id)
 
 	if object == "Deactivate":
-
-		if User.has_property("MessageNotificationsDeactivate"):
-			try:
-				MessageNotifications = User.get_property("MessageNotificationsDeactivate")
-				for MessageNotification in MessageNotifications:
-					Bot.delete_message(Call.message.chat.id, MessageNotification)
-			except: print("Ошибка удаления сообщения.")
-		if User.has_property("ID_DelMessage"):
-			try:
-				ID_DelMessage = User.get_property("ID_DelMessage")
-				Bot.delete_message(Call.message.chat.id, ID_DelMessage)
-			except: print("Ошибка удаления сообщения ID_DelMessage.")
+		DeleteMessageNotificationsDeactivate(User, Call, Bot)
 
 	if object == "Change":
-		if User.has_property("MessageNotificationsChange"):
-			try:
-				MessageNotifications = User.get_property("MessageNotificationsChange")
-				for MessageNotification in MessageNotifications:
-					Bot.delete_message(Call.message.chat.id, MessageNotification)
-			except: print("Ошибка удаления сообщения.")
+		DeleteMessageNotificationsChange(User, Call, Bot)
 
 	Bot.answer_callback_query(Call.id)
 
@@ -738,9 +768,41 @@ def ProcessWithoutReminders(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
 	Bot.send_message(
 		Call.message.chat.id,
-		_("И вам спасибо!\nХорошего дня! ))")
-		)
+		_("И вам спасибо!\nХорошего дня! ))"),
+		reply_markup = inline_keyboard.SendEmoji("❤️")
+	)
 
+	Bot.answer_callback_query(Call.id)
+
+@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Update"))
+def ProcessWithoutReminders(Call: types.CallbackQuery):
+	User = Manager.auth(Call.from_user)
+
+	Bot.delete_message(Call.message.chat.id, Call.message.id) 
+	DeleteMessageNotificationsChange(User, Call, Bot)
+	ProcessChange_reminders(Call)
+	Bot.answer_callback_query(Call.id)
+
+@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Emoji"))
+def ProcessWithoutReminders(Call: types.CallbackQuery):
+	User = Manager.auth(Call.from_user)
+	isNew = False
+	Emoji = Call.data.split("_")[-1]
+	Bot.edit_message_reply_markup(
+		Call.message.chat.id,
+		Call.message.id,
+		reply_markup = None
+	)
+	Bot.set_message_reaction(
+		Call.message.chat.id, 
+		Call.message.id, 
+		[ReactionTypeEmoji(Emoji)]
+		)
+	if User.has_property("New") and User.get_property("New") == True:
+		isNew = True
+	if Emoji == "❤️" and not isNew:
+		DeleteMessageNotificationsChange(User, Call, Bot)
+		ProcessChange_reminders(Call)
 	Bot.answer_callback_query(Call.id)
 
 @Bot.message_handler(content_types = ["audio", "document", "video"])
