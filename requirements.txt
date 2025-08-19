@@ -1,4 +1,4 @@
 -r Source/TeleBotAdminPanel/requirements.txt
-dublib == 0.18.1
+dublib == 0.23.1
 apscheduler
 dateparser

@@ -1,19 +1,23 @@
-from Source.Functions import FormatDays, Calculator, Skinwalker, _
+from Source.Functions import FormatDays, Calculator, Skinwalker
+from Source.Timezoner import CorrectUserTime, Replacing_timezone
+from Source.Bot_Addition import DeleteEvent
 
 from dublib.TelebotUtils import UsersManager
 from dublib.Methods.Filesystem import ReadJSON
-from dublib.Polyglot import Markdown
+from dublib.Engine.GetText import _
 
 import os
 import logging
 import dateparser
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from telebot import TeleBot
 
 class Mailer:
 
 	def __CheckFormatRemained(self, event: dict) -> bool:
-		if "Format" in event.keys() and event["Format"] == "Passed":return False
+		"""Проверка отслеживается ли событие в будущем."""
+
+		if "Format" in event.keys() and event["Format"] == "Passed": return False
 		return True
 	
 	def __CheckTodayDate(self, event: dict) -> bool:
@@ -58,109 +62,155 @@ class Mailer:
 		self.__Manager = Manager
 		self.__language = language
 
-	def Start(self):
+	def Start(self, objectsdirs: list[str]):
+		"""
+		Добавление событий в рассылку:
+			MessagesDaily
+			MessagesToday
+			MessagesOnceDefault
+			MessagesOnce
+
+		"""
+
 		UsersID = self.__GetUsersID()
 
 		for ID in UsersID:
+
 			MessagesDaily: dict = {}
+			MessagesTodaywithTime: dict = {}
+			MessagesTodayDefault: dict = {}
 			MessagesOnce: dict = {}
-			MessagesToday: dict = {}
+			
 			DailyEvents = []
+			TodayEventsTime = []
+			TodayEventsDefault = []
 			OnceEvents = []
-			TodayEvents = []
+
 			Data = ReadJSON(f"Data/Users/{ID}.json")
 			logging.info(f"Начата рассылка: {ID} ")
 
 			if "events" in Data["data"].keys():
 				for EventID in Data["data"]["events"].keys():
 					Event: dict = Data["data"]["events"][EventID]
+					User = self.__Manager.get_user(ID)
 
 					if self.__CheckFormatRemained(Event):
+						
+						if "MessagesDaily" in objectsdirs:
+							if Event["ReminderFormat"] == "EveryDay" and not self.__CheckTodayDate(Event):
+								DailyEvents.append(Event)
+								MessagesDaily[ID] = {"Events": DailyEvents}
+
+						if "MessagesTodaywithTime" in objectsdirs and Event["Time"] != None: 
+							Delta = Replacing_timezone(self.__Manager.get_user(ID))
+							if self.__CheckTodayDate(Event) and CorrectUserTime(Event["Time"], Delta) == datetime.now(timezone.utc).replace(microsecond=0):
+								TodayEventsTime.append(Event)
+								MessagesTodaywithTime[ID] = {"Events": TodayEventsTime}
+								DeleteEvent(User, EventID)
+
+						if "MessagesTodayDefault" in objectsdirs: 
+							if self.__CheckTodayDate(Event) and Event["Time"] == None:
+								TodayEventsDefault.append(Event)
+								MessagesTodayDefault[ID] = {"Events": TodayEventsDefault}
+
+						if "MessagesOnce" in objectsdirs and Event["Time"] != None:
+							Delta = Replacing_timezone(self.__Manager.get_user(ID))
+							if Event["ReminderFormat"] == "OnceDay" and self.__CheckReminderPeriod(Event) and not self.__CheckTodayDate(Event) and CorrectUserTime(Event["Time"], Delta) == datetime.now(timezone.utc).replace(microsecond=0):
+								OnceEvents.append(Event)
+								MessagesOnce[ID] = {"Events": OnceEvents}
+								DeleteEvent(User, EventID)
+
+				self.send(MessagesDaily, MessagesTodaywithTime, MessagesTodayDefault, MessagesOnce)
+
+	def send(self, MessagesDaily: dict = None, MessagesTodaywithTime: dict = None, MessagesTodayDefault: dict = None, MessagesOnce: dict = None ):
+		if MessagesDaily:
+			for ID in MessagesDaily.keys():
+				Reminders = list()
+				User = self.__Manager.get_user(ID)
+
+				for i in range(len(MessagesDaily[ID]["Events"])):
+					Name = MessagesDaily[ID]["Events"][i]["Name"]
+					Remain = Calculator(MessagesDaily[ID]["Events"][i]["Date"])
+					if Remain < 0:
+						skinwalker = Skinwalker(MessagesDaily[ID]["Events"][i]["Date"])
+						Remain = Calculator(skinwalker)
+					Days = FormatDays(Remain, self.__language)
+					Reminders.append(_("<b>%s</b> наступит через %s %s!") % (Name, Remain, Days))
 				
-						if Event["ReminderFormat"] == "EveryDay" and not self.__CheckTodayDate(Event):
-							DailyEvents.append(Event)
-							MessagesDaily[ID] = {"Events": DailyEvents}
-							
-						if self.__CheckTodayDate(Event):
-							TodayEvents.append(Event)
-							MessagesToday[ID] = {"Events": TodayEvents}
+				base = ""
+				for i in range(len(Reminders)):
 
-						if Event["ReminderFormat"] == "OnceDay" and self.__CheckReminderPeriod(Event) and not self.__CheckTodayDate(Event):
-							OnceEvents.append(Event)
-							MessagesOnce[ID] = {"Events": OnceEvents}
+					if len(base + Reminders[i]) < 2000: base += Reminders[i] + "\n\n" 
+					
+					if len(base + Reminders[i]) >= 2000 or i == len(Reminders) - 1:
 
-		
-			print(MessagesDaily)
-			print(MessagesOnce)
-			print(MessagesToday)
-			self.send(MessagesDaily, MessagesOnce, MessagesToday)
+						try:
+							self.__Bot.send_message(ID, base, parse_mode = "HTML")
+							logging.info(f"Отправлены ежедневные напоминания {ID}: {Name}")
+							User.set_chat_forbidden(False)
+						except Exception as E: 
+							logging.info(f"{E}, {ID}")
+							User.set_chat_forbidden(True)
 
-	
-	def send(self, MessagesDaily: dict, MessagesOnce: dict, MessagesToday: dict):
+		if MessagesTodaywithTime:
+			for ID in MessagesTodaywithTime.keys():
+				User = self.__Manager.get_user(ID)
 
-		for ID in MessagesDaily.keys():
-			Reminders = list()
-			User = self.__Manager.get_user(ID)
+				for i in range(len(MessagesTodaywithTime[ID]["Events"])):
 
-			for i in range(len(MessagesDaily[ID]["Events"])):
-				Name = Markdown(str(MessagesDaily[ID]["Events"][i]["Name"])).escaped_text
-				Remain = Calculator(MessagesDaily[ID]["Events"][i]["Date"])
-				if Remain < 0:
-					skinwalker = Skinwalker(MessagesDaily[ID]["Events"][i]["Date"])
-					Remain = Calculator(skinwalker)
-				Days = FormatDays(Remain, self.__language)
-				Reminders.append(_("*%s* наступит через %s %s\\!") % (Name, Remain, Days))
-			
-			base = ""
-			for i in range(len(Reminders)):
-
-				if len(base + Reminders[i]) < 2000: base += Reminders[i] + "\n\n" 
-				
-				if len(base + Reminders[i]) >= 2000 or i == len(Reminders) - 1:
-
+					Name = MessagesTodaywithTime[ID]["Events"][i]["Name"]
 					try:
-						self.__Bot.send_message(ID, base, parse_mode="MarkdownV2")
-						logging.info(f"Отправлены ежедневные напоминания {ID}: {Name}")
+						self.__Bot.send_message(
+								ID, 
+								_("🔔 <b>НАПОМИНАНИЕ!</b> 🔔\n\nСегодня ваше событие <b>%s</b>!\n\nНе забудьте!)") % Name,
+								parse_mode = "HTML"
+							)
+						
+						logging.info(f"Отправленно сегодняшнее напоминание (время, выбранное пользователем) {ID}: {Name}")
 						User.set_chat_forbidden(False)
+
 					except Exception as E: 
 						logging.info(f"{E}, {ID}")
 						User.set_chat_forbidden(True)
 
-		for ID in MessagesOnce.keys():
-			User = self.__Manager.get_user(ID)
+		if MessagesTodayDefault:
+			for ID in MessagesTodayDefault.keys():
+				User = self.__Manager.get_user(ID)
 
-			for i in range(len(MessagesOnce[ID]["Events"])):
-				Name = Markdown(str(MessagesOnce[ID]["Events"][i]["Name"])).escaped_text
-				Reminder = Markdown(str(MessagesOnce[ID]["Events"][i]["Reminder"])).escaped_text
-				days = FormatDays(int(MessagesOnce[ID]["Events"][i]["Reminder"]), self.__language)
-				try:
-					self.__Bot.send_message(
-					ID, 
-					_("🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nДо события *%s* осталось %s %s\\!\n\nХорошего вам дня\\!") % (Name, Reminder, days),
-					parse_mode = "MarkdownV2"
-					)
-					logging.info(f"Отправленно разовое напоминание {ID}: {Name}")
-					User.set_chat_forbidden(False)
+				for i in range(len(MessagesTodayDefault[ID]["Events"])):
 
-				except Exception as E: 
-					logging.info(f"{E}, {ID}")
-					User.set_chat_forbidden(True)
-			
-		for ID in MessagesToday.keys():
-			User = self.__Manager.get_user(ID)
+					Name = MessagesTodayDefault[ID]["Events"][i]["Name"]
+					try:
+						self.__Bot.send_message(
+								ID, 
+								_("🔔 <b>НАПОМИНАНИЕ!</b> 🔔\n\nСегодня ваше событие <b>%s</b>!\n\nНе забудьте!)") % Name,
+								parse_mode = "HTML"
+							)
+						
+						logging.info(f"Отправленно сегодняшнее напоминание (время по умолчанию) {ID}: {Name}")
+						User.set_chat_forbidden(False)
 
-			for i in range(len(MessagesToday[ID]["Events"])):
+					except Exception as E: 
+						logging.info(f"{E}, {ID}")
+						User.set_chat_forbidden(True)
 
-				Name = Markdown(str(MessagesToday[ID]["Events"][i]["Name"])).escaped_text
-				try:
-					self.__Bot.send_message(
-							ID, 
-							_("🔔 *НАПОМИНАНИЕ\\!* 🔔\n\nСегодня ваше событие *%s*\\!\n\nНе забудьте\\!\\)") % Name,
-							parse_mode = "MarkdownV2"
+		if MessagesOnce:
+			for ID in MessagesOnce.keys():
+				User = self.__Manager.get_user(ID)
+				for i in range(len(MessagesOnce[ID]["Events"])):
+					Name = MessagesOnce[ID]["Events"][i]["Name"]
+					Reminder = MessagesOnce[ID]["Events"][i]["Reminder"]
+					days = FormatDays(int(MessagesOnce[ID]["Events"][i]["Reminder"]), self.__language)
+					try:
+						self.__Bot.send_message(
+						ID, 
+						_("🔔 <b>НАПОМИНАНИЕ!</b> 🔔\n\nДо события <b>%s</b> осталось %s %s!\n\nХорошего вам дня!") % (Name, Reminder, days),
+						parse_mode = "HTML"
 						)
-					logging.info(f"Отправленно сегодняшнее напоминание {ID}: {Name}")
-					User.set_chat_forbidden(False)
 
-				except Exception as E: 
-					logging.info(f"{E}, {ID}")
-					User.set_chat_forbidden(True)
+						logging.info(f"Отправленно разовое напоминание {ID}: {Name}")
+						User.set_chat_forbidden(False)
+
+					except Exception as E: 
+						logging.info(f"{E}, {ID}")
+						User.set_chat_forbidden(True)

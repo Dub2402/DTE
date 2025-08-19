@@ -1,27 +1,30 @@
 from dublib.Methods.Filesystem import ReadJSON
-from dublib.TelebotUtils import UserData
+from dublib.Engine.GetText import _
 
-from datetime import date
+from datetime import date, datetime
 import dateparser
 import gettext
-import telebot
-from telebot import types
 
 Settings = ReadJSON("Settings.json")
 Language = Settings["language"]
 
-_ = gettext.gettext
-try: _ = gettext.translation("DTE", "locales", languages = [Language]).gettext
-except FileNotFoundError: pass
-
 def CheckValidDate(Date: str)-> bool:
+	"""Проверка правильности введённой даты."""
+
 	try:
-		dateparser.parse(Date, settings={'DATE_ORDER': 'DMY','STRICT_PARSING': True}).date()
+		dateparser.parse(Date, settings ={'DATE_ORDER': 'DMY','STRICT_PARSING': True}).date()
 		return True
 	except:
 		return False
 	
+def GetValidTime(Time: str)-> datetime.time:
+	"""Получение форматированного времени введённого пользователем."""
+
+	return str(dateparser.parse(Time).time().strftime(format = "%H:%M"))
+
 def GetFreeID(Events: dict) -> int:
+	""" Получение свободного ID события."""
+	
 	Increment = list()
 	for key in Events.keys(): Increment.append(int(key))
 	Increment.sort()
@@ -30,30 +33,37 @@ def GetFreeID(Events: dict) -> int:
 
 	return FreeID
 
-def Calculator(event: str) -> int:
+def Calculator(Date: str) -> int:
+	"""Количество дней между датами. Значения могут быть как отрицательные, так и положительные."""
+
 	today = date.today()
-	remains = (dateparser.parse(event, settings={'DATE_ORDER': 'DMY'}).date() - today).days
+	remains = (dateparser.parse(Date, settings={'DATE_ORDER': 'DMY'}).date() - today).days
 	
 	return remains
 
 def FormatDays(remains: int, language : str) -> str:
+	"""
+	Отформатировать в зависимости от количества дней слово "день".
+	"""
+
 	if language == "en":
 		days = "days"
 		if remains in [1]: days = "day"	
 
 	else:
 		days = "дней"
-		if remains in [11, 12, 13]: pass
+		if remains in [11, 12, 13, 113, 213, 313]: pass
 		elif str(remains).endswith("1") and remains not in [11, 12, 13]: days = "день"
-		elif str(remains).endswith("2") or str(remains).endswith("3") or str(remains).endswith("4") and remains not in [11, 12, 13]: days = "дня"
+		elif str(remains).endswith("2") or str(remains).endswith("3") or str(remains).endswith("4") and remains not in [11, 12, 13, 113, 213, 313]: days = "дня"
 			
 	return days
 
-def Skinwalker(event: str) -> str:
+def Skinwalker(Date: str) -> str:
+	"""Получение новой даты, в текущем или следующем году."""
 
 	yearnew = int(date.today().year) + 1 
-	day = dateparser.parse(event, settings={'DATE_ORDER': 'DMY'}).day
-	month = dateparser.parse(event, settings={'DATE_ORDER': 'DMY'}).month
+	day = dateparser.parse(Date, settings={'DATE_ORDER': 'DMY'}).day
+	month = dateparser.parse(Date, settings={'DATE_ORDER': 'DMY'}).month
 	newevent = str(day) + "." + str(month) + "." + str(yearnew)
 	remains = Calculator(newevent)
 	if remains > 364:
@@ -62,25 +72,8 @@ def Skinwalker(event: str) -> str:
 
 	return newevent
 
+def LimitationOnceReminders(date: str) -> int:
+	skinwalker = Skinwalker(date) 
+	remains = Calculator(skinwalker)
 
-def DeleteMessageNotificationsDeactivate(User: UserData, Call: types.CallbackQuery, Bot: telebot.TeleBot):
-	if User.has_property("MessageNotificationsDeactivate"):
-		try:
-			MessageNotifications = User.get_property("MessageNotificationsDeactivate")
-			for MessageNotification in MessageNotifications:
-				Bot.delete_message(Call.message.chat.id, MessageNotification)
-		except: print("Ошибка удаления сообщения.")
-		if User.has_property("ID_DelMessage"):
-			try:
-				ID_DelMessage = User.get_property("ID_DelMessage")
-				Bot.delete_message(Call.message.chat.id, ID_DelMessage)
-			except: print("Ошибка удаления сообщения ID_DelMessage.")
-
-def DeleteMessageNotificationsChange(User: UserData, Call: types.CallbackQuery, Bot: telebot.TeleBot):
-	if User.has_property("MessageNotificationsChange"):
-		print(Call.message.chat.id)
-		try:
-			MessageNotifications = User.get_property("MessageNotificationsChange")
-			for MessageNotification in MessageNotifications:
-				Bot.delete_message(Call.message.chat.id, MessageNotification)
-		except: print("Ошибка удаления сообщения.")
+	return remains
