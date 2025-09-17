@@ -5,6 +5,7 @@ from Source.TeleBotAdminPanel import Panel
 from Source.InlineKeyboards import InlineKeyboard
 from Source.ReplyKeyboard import ReplyKeyboard
 from Source.Mailer import Mailer
+from Source.Modules.Mode import Modes
 
 from Source.Timezoner import TimezonerInlineKeyboards, TimezonerDecorators, CorrectUserTime, Replacing_timezone
 import Source.AdminPanelExtensions
@@ -45,6 +46,7 @@ reply_keyboard = ReplyKeyboard()
 inline_keyboard = InlineKeyboard()
 AdminPanel = Panel()
 Cacher = TeleCache()
+modes = Modes(Manager, Bot)
 
 Cacher.set_bot(Bot)
 Cacher.set_chat_id(Settings["chat_id"])
@@ -414,6 +416,7 @@ def ProcessText(Message: types.Message):
 		return
 
 AdminPanel.decorators.inline_keyboards(Bot, Manager)
+modes.decorators.inline_keyboards()
 
 TimezonerDecorators(Bot, Manager, inline_keyboard)
 
