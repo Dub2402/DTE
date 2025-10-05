@@ -1,13 +1,14 @@
 from dublib.Engine.GetText import GetText
-from Source.Functions import FormatDays, Skinwalker, Calculator, CheckValidDate, GetValidTime, LimitationOnceReminders
+from Source.Functions import CheckValidDate, GetValidTime, LimitationOnceReminders
 from Source.Bot_Addition import *
 from Source.TeleBotAdminPanel import Panel
-from Source.InlineKeyboards import InlineKeyboard
-from Source.ReplyKeyboard import ReplyKeyboard
+from Source.UI.InlineKeyboards import InlineKeyboard
+from Source.UI.ReplyKeyboard import ReplyKeyboard
 from Source.Mailer import Mailer
 from Source.Modules.Mode import Modes
+from Source.Events import Core as CoreEvents, Additional, EventsData
 
-from Source.Timezoner import TimezonerInlineKeyboards, TimezonerDecorators, CorrectUserTime, Replacing_timezone
+from Source.Modules.Timezoner import TimezonerInlineKeyboards, TimezonerDecorators, CorrectUserTime, Replacing_timezone
 import Source.AdminPanelExtensions
 import Source.AdditionalColumns
 
@@ -147,83 +148,8 @@ def ProcessSettingsReminders(Message: types.Message):
 @Bot.message_handler(content_types = ["text"], regexp = "📜 " + _(" Мои события"))
 def ProcessTextMyEvents(Message: types.Message):
 	User = Manager.auth(Message.from_user)
-
-	if not User.get_property("events"):
-		Bot.send_message(
-			Message.chat.id, 
-			_("Вы не создали ни одного события 🙄\nНужно это дело исправить!)"),
-			parse_mode = "HTML", 
-			reply_markup = inline_keyboard.AddNewEvent()
-			)
-		
-	else:
-		call = User.get_property("call")
-		Events: dict = User.get_property("events").copy()
-		DeleteMessage = Bot.send_message(
-					Message.chat.id,
-					_("Приветствую, %s!") % call, 
-					parse_mode = "HTML")
-		SaveMessageID(User, DeleteMessage.id, ["MessagesMyEvents"])
-		number_event = 1
-
-		for EventID in Events.keys():
-			remains = Calculator(User.get_property("events")[EventID]["Date"])
-			name = GetPropertyEvent(User, "Name", EventID)
-			days = FormatDays(remains, Settings["language"])
-
-			if remains == 0:
-				DeleteMessage = Bot.send_message(
-					Message.chat.id,
-					_("Ваше событие <b>%s</b> сегодня.") % name,
-					parse_mode = "HTML",
-					reply_markup = inline_keyboard.RemoveEvent(EventID))
-				SaveMessageID(User, DeleteMessage.id, ["MessagesMyEvents"])
-
-			elif remains > 0:
-				DeleteMessage = Bot.send_message(
-					Message.chat.id,
-					f"{number_event}) " + _("<b>%s</b> наступит через %s %s!") % (name, remains, days),
-					parse_mode = "HTML",
-					reply_markup = inline_keyboard.RemoveEvent(EventID))
-				SaveMessageID(User, DeleteMessage.id, ["MessagesMyEvents"])
-				
-			else:
-				if Events[EventID]["Format"] == "Passed":
-					remains = str(abs(remains))
-					DeleteMessage = Bot.send_message(
-						Message.chat.id,
-						f"{number_event}) " + _("Событие <b>%s</b> было %s %s назад!") % (name, remains, days),
-						parse_mode = "HTML",
-						reply_markup = inline_keyboard.RemoveEvent(EventID))
-					SaveMessageID(User, DeleteMessage.id, ["MessagesMyEvents"])
-
-				if Events[EventID]["Format"] == "Remained":
-					newdate = Skinwalker(User.get_property("events")[EventID]["Date"])
-					remainsnew = Calculator(newdate)
-					days = FormatDays(remainsnew, Settings["language"])
-					if remainsnew == 0:
-						DeleteMessage = Bot.send_message(
-							Message.chat.id,
-							f"{number_event}) " + _("Ваше событие <b>%s</b> сегодня.") % name,
-							parse_mode = "HTML",
-							reply_markup = inline_keyboard.RemoveEvent(EventID))
-						SaveMessageID(User, DeleteMessage.id, ["MessagesMyEvents"])
-						
-					else:
-						DeleteMessage = Bot.send_message(
-							Message.chat.id, 
-							f"{number_event}) " + _("<b>%s</b> наступит через %s %s!") % (name, remainsnew, days),
-							parse_mode = "HTML",
-							reply_markup = inline_keyboard.RemoveEvent(EventID))
-						SaveMessageID(User, DeleteMessage.id, ["MessagesMyEvents"])
-			number_event += 1 		
-			sleep(0.1)
-		DeleteMessage = Bot.send_message(
-						Message.chat.id,
-						_("Хорошего вам дня!)"),
-						reply_markup = inline_keyboard.SendEmoji("❤️", "events")
-						)
-		SaveMessageID(User, DeleteMessage.id, ["MessagesMyEvents"])
+	
+	CoreEvents(User, Bot, Settings).my_events()
 
 @Bot.message_handler(content_types = ["text"], regexp = _("👄 Поделиться с друзьями"))
 def ProcessShareWithFriends(Message: types.Message):
@@ -278,7 +204,7 @@ def ProcessText(Message: types.Message):
 	if User.expected_type == "date":
 		if CheckValidDate(Message.text) == True:
 			User.set_temp_property("Date", Message.text)
-			remains = Calculator(Message.text)
+			remains = Additional.Calculator(Message.text)
 			User.set_expected_type(None)
 			User.set_temp_property("Format", "Remained")
 			New_User = False
@@ -307,13 +233,14 @@ def ProcessText(Message: types.Message):
 		
 		try:
 			if User.has_property("Name"): Name = User.get_property("Name")
-			else: Name = GetPropertyEvent(User, "Name", FreeID)
+			else: 
+				Name = EventsData(User).property_event("Name", FreeID)
 
 			if User.has_property("Date"): remains = LimitationOnceReminders(User.get_property("Date"))
-			else: remains = LimitationOnceReminders(GetPropertyEvent(User, "Date", FreeID))
+			else: remains = LimitationOnceReminders(EventsData(User).property_event("Date", FreeID))
 
-			Days_Reminder_piece = FormatDays(int(Reminder_piece), Settings["language"])
-			Days_Remains = FormatDays(remains, Settings["language"])
+			Days_Reminder_piece = Additional.FormatDays(int(Reminder_piece), Settings["language"])
+			Days_Remains = Additional.FormatDays(remains, Settings["language"])
 
 			if Modificated_message.isdigit() and int(Reminder_piece) >= 1 and int(Reminder_piece) <= remains and Time_piece.count(":") == 1:
 				if len(Time_piece) >= 3 and len(Time_piece) <= 5:
@@ -371,10 +298,10 @@ def ProcessText(Message: types.Message):
 				FreeID = User.get_property("EventID")
 
 				if User.has_property("Date"): remains = LimitationOnceReminders(User.get_property("Date"))
-				else: remains = LimitationOnceReminders(GetPropertyEvent(User, "Date", FreeID))
+				else: remains = LimitationOnceReminders(EventsData(User).property_event("Date", FreeID))
 
 				if User.has_property("Name"): User.get_property("Name")
-				else: Name = GetPropertyEvent(User, "Name", FreeID)
+				else: Name = EventsData(User).property_event("Name", FreeID)
 				
 				if remains == 0: 
 					Delta = Replacing_timezone(User)
@@ -396,7 +323,7 @@ def ProcessText(Message: types.Message):
 					Data = GetDataEvent(User)
 					SetDataEvent(User, Data, FreeID)
 
-				Name = GetPropertyEvent(User, "Name", FreeID)
+				Name = EventsData(User).property_event("Name", FreeID)
 
 				if User.has_property("Oncereminders_button"):
 						if User.get_property("Oncereminders_button") == "start": button = inline_keyboard.Saving(["Save"], _("Спасибо"))
@@ -467,8 +394,8 @@ def InlineButtonsFormatDays(Call: types.CallbackQuery):
 	Format = Call.data.split("_")[-1]
 
 	if isEventExist(User, EventID): 
-		Name = GetPropertyEvent(User, "Name", EventID)
-		Date = GetPropertyEvent(User, "Date", EventID)
+		Name = EventsData(User).property_event("Name", EventID)
+		Date = EventsData(User).property_event("Date", EventID)
 		SetPropertyEvent(User, {"Format": Format}, EventID)
 	else: 
 		Name = User.get_property("Name")
@@ -477,9 +404,9 @@ def InlineButtonsFormatDays(Call: types.CallbackQuery):
 		SetDataEvent(User, Data, EventID)
 	
 	if Format == "Remained":
-		skinwalker = Skinwalker(Date)
-		remains = str(Calculator(skinwalker))
-		days = FormatDays(remains, Settings["language"])
+		skinwalker = Additional.Skinwalker(Date)
+		remains = str(Additional.Calculator(skinwalker))
+		days = Additional.FormatDays(remains, Settings["language"])
 		DeleteMessageNotification = Bot.send_message(
 			chat_id = Call.message.chat.id,
 			text = _("Данные сохранены!\n\nДо события <b>$Name</b> осталось $remains $days!\n\nБудем ждать его вместе с <u>ежедневными напоминаниями!</u> 🛎").replace("$Name", Name).replace("$remains", remains).replace("$days" ,days),
@@ -490,8 +417,8 @@ def InlineButtonsFormatDays(Call: types.CallbackQuery):
 
 	if Format == "Passed":
 
-		remains = str(abs(Calculator(Date)))
-		days = FormatDays(remains, Settings["language"])
+		remains = str(abs(Additional.Calculator(Date)))
+		days = Additional.FormatDays(remains, Settings["language"])
 		DeleteMessageNotification = Bot.send_message(
 			chat_id = Call.message.chat.id,
 			text = _("Данные сохранены!\n\nВаше событие <b>$Name</b> произошло $remains $days назад!").replace("$Name", Name).replace("$remains", remains).replace("$days", days),
@@ -511,7 +438,7 @@ def InlineButtonAnotherDay(Call: types.CallbackQuery):
 	if User.has_property("Name"): Name = User.get_property("Name")
 	else:
 		FreeID = User.get_property("EventID")
-		Name = GetPropertyEvent(User, "Name", FreeID)
+		Name = EventsData(User).property_event("Name", FreeID)
 	DeleteMessageNotification = Bot.send_message(
 		Call.message.chat.id,
 		_("Укажите, за сколько дней и в какое время вам напомнить о событии <b>$Name</b>? 🔊\n\n<i>Пример: 10 18:30 (означает за 10 дней и в 18:30)</i>").replace("$Name", Name),
@@ -571,14 +498,14 @@ def InlineButtonRemoveEvent(Call: types.CallbackQuery):
 	DeleteEvent(User, EventID)
 	DeleteMessageID(User, Call, telemaster, "MessagesMyEvents")
 
-	if User.get_property("events"):
-		ProcessTextMyEvents(Call.message)
+	if User.get_property("events"): CoreEvents(User, Bot, Settings).my_events()
 
 	Bot.answer_callback_query(Call.id)
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Delete_reminder"))
 def ProcessDeleteReminder(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
+
 	CountReminder = 0
 	somedict: dict = User.get_property("events").copy()
 
@@ -602,7 +529,7 @@ def ProcessDeleteReminder(Call: types.CallbackQuery):
 
 			number_event = 1
 			for EventID in somedict.keys():
-				Name = GetPropertyEvent(User, "Name", EventID)
+				Name = EventsData(User).property_event("Name", EventID)
 			
 				if somedict[EventID]["ReminderFormat"] == "EveryDay":
 					DeleteMessageNotification = Bot.send_message(
@@ -611,11 +538,12 @@ def ProcessDeleteReminder(Call: types.CallbackQuery):
 					reply_markup = inline_keyboard.ChoiceEventToRemoveReminder(EventID),
 					parse_mode = "HTML")
 					SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsDeactivate"])
+					number_event += 1 
 					
 				if somedict[EventID]["ReminderFormat"] == "OnceDay":
-					Reminder = GetPropertyEvent(User, "Reminder", EventID)
-					Time = GetPropertyEvent(User, "Time", EventID)
-					days = FormatDays(int(Reminder), Settings["language"])
+					Reminder = EventsData(User).property_event("Reminder", EventID)
+					Time = EventsData(User).property_event("Time", EventID)
+					days = Additional.FormatDays(int(Reminder), Settings["language"])
 					if Reminder == "0": text = f"{number_event}) " + _("<b>$Name</b>\nНапоминание установлено на $Time день в день!").replace("$Name", Name).replace("$Time", Time)
 					else: text = f"{number_event}) " + _("<b>$Name</b>\nНапоминание установлено на $Time за $Reminder $days!").replace("$Name", Name).replace("$Time", Time).replace("$Reminder", Reminder).replace("$days", days)
 					DeleteMessageNotification = Bot.send_message(
@@ -624,7 +552,7 @@ def ProcessDeleteReminder(Call: types.CallbackQuery):
 						reply_markup = inline_keyboard.ChoiceEventToRemoveReminder(EventID),
 						parse_mode = "HTML")
 					SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsDeactivate"])
-				number_event += 1 
+					number_event += 1 
 				sleep(0.1)			
 	else:
 		DeleteMessageNotification = Bot.send_message(
@@ -664,6 +592,9 @@ def InlineButtonRemoveReminder(Call: types.CallbackQuery):
 	if Delete == 0:
 		DeleteMessageID(User, Call, telemaster, "MessageNotificationsDeactivate")
 
+	DeleteMessageID(User, Call, telemaster, "MessageNotificationsDeactivate")
+	ProcessDeleteReminder(Call = Call)
+
 	Bot.answer_callback_query(Call.id)
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Change_reminder"))
@@ -684,7 +615,7 @@ def ProcessChange_reminders(Call: types.CallbackQuery):
 			
 			number_event = 1
 			for EventID in somedict.keys():
-				Name = GetPropertyEvent(User, "Name", EventID)
+				Name = EventsData(User).property_event("Name", EventID)
 				
 				if somedict[EventID]["ReminderFormat"] == "EveryDay":
 					DeleteMessageNotification = Bot.send_message(
@@ -696,9 +627,9 @@ def ProcessChange_reminders(Call: types.CallbackQuery):
 	
 				if somedict[EventID]["ReminderFormat"] == "OnceDay":
 
-					Reminder = GetPropertyEvent(User, "Reminder", EventID)
-					Time = GetPropertyEvent(User, "Time", EventID)
-					days = FormatDays(int(Reminder), Settings["language"])
+					Reminder = EventsData(User).property_event("Reminder", EventID)
+					Time = EventsData(User).property_event("Time", EventID)
+					days = Additional.FormatDays(int(Reminder), Settings["language"])
 					if Reminder == "0": text = f"{number_event}) " + _("<b>$Name</b>\nНапоминание установлено на $Time день в день!").replace("$Name", Name).replace("$Time", Time)
 					else: text = f"{number_event}) " +  _("<b>$Name</b>\nНапоминание установлено на $Time за $Reminder $days!").replace("$Name", Name).replace("$Time", Time).replace("$Reminder", Reminder).replace("$days", days)
 					DeleteMessageNotification = Bot.send_message(
@@ -750,7 +681,7 @@ def InlineButtonChoiceEventToAddReminder(Call: types.CallbackQuery):
 
 	EventID = Call.data.split("_")[-1]
 	User.set_property("EventID", EventID)
-	Name = GetPropertyEvent(User, "Name", EventID)
+	Name = EventsData(User).property_event("Name", EventID)
 	DeleteMessageNotification = Bot.send_message(
 		Call.message.chat.id,
 		_("Выберите тип напоминания для события <b>%s</b>:") % Name,
@@ -779,12 +710,12 @@ def ProcessEveryDayReminders(Call: types.CallbackQuery):
 	User.set_temp_property("ReminderFormat", "EveryDay")
 	EventID = User.get_property("EventID")
 
-	if isEventExist(User, EventID): Name = GetPropertyEvent(User, "Name", EventID)
+	if isEventExist(User, EventID): Name = EventsData(User).property_event("Name", EventID)
 	else: Name = User.get_property("Name")
 
 	if subtype == "start": 
 		User.set_property("Oncereminders_button", subtype)
-		remains = Calculator(User.get_property("Date"))
+		remains = Additional.Calculator(User.get_property("Date"))
 		if remains < 0: 
 			DeleteMessageNotification = Bot.send_message(
 				Call.message.chat.id,
@@ -804,7 +735,7 @@ def ProcessEveryDayReminders(Call: types.CallbackQuery):
 			SetDataEvent(User, Data, EventID)
 
 		else:
-			days = FormatDays(remains, Settings["language"])
+			days = Additional.FormatDays(remains, Settings["language"])
 			DeleteMessageNotification = Bot.send_message(
 				chat_id = Call.message.chat.id,
 				text = _("Данные сохранены!\n\nДо события <b>$Name</b> осталось $remains $days!\n\nБудем ждать его вместе с <u>ежедневными напоминаниями!</u> 🛎").replace("$Name", Name).replace("$remains", str(remains)).replace("$days", days),
@@ -816,7 +747,7 @@ def ProcessEveryDayReminders(Call: types.CallbackQuery):
 			SetDataEvent(User, Data, EventID)
 
 	if subtype == "change":
-		Name = GetPropertyEvent(User, "Name", EventID)
+		Name = EventsData(User).property_event("Name", EventID)
 		DeleteMessageNotification = Bot.send_message(
 			Call.message.chat.id,
 			_("Вы хотите включить ежедневные напоминания для события <b>$Name</b>?").replace("$Name", Name),
@@ -833,7 +764,7 @@ def ProcessOnceDayReminders(Call: types.CallbackQuery):
 	subtype = Call.data.split("_")[-1]
 	EventID = User.get_property("EventID")
 
-	if isEventExist(User, EventID) and GetPropertyEvent(User, "Format", EventID) == "Passed":
+	if isEventExist(User, EventID) and EventsData(User).property_event("Format", EventID) == "Passed":
 		DeleteMessageNotification = SendChangeFormat(Bot, Call, inline_keyboard)
 		return
 
@@ -854,7 +785,7 @@ def ProcessWithoutReminders(Call: types.CallbackQuery):
 	User = Manager.auth(Call.from_user)
 	subtype = Call.data.split("_")[-1]
 	EventID = User.get_property("EventID")
-	Name = GetPropertyEvent(User, "Name", EventID)
+	Name = EventsData(User).property_event("Name", EventID)
 	if subtype == "change": text = _("Хотите отключить все напоминания для события <b>$Name</b>? ").replace("$Name", Name)
 	else: text = _("Хотите отключить все напоминания для события <b>$Name</b>?").replace("$Name", Name)
 	DeleteMessageNotification = Bot.send_message(
@@ -873,7 +804,7 @@ def ProcessConfirmation(Call: types.CallbackQuery):
 	notification_type = Call.data.split("_")[1]
 	subtype = Call.data.split("_")[2]
 	EventID = User.get_property("EventID")
-	Name = GetPropertyEvent(User, "Name", EventID)
+	Name = EventsData(User).property_event("Name", EventID)
 
 	if notification_type == "WithoutNotifications":
 		if subtype == "change": button = inline_keyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "AllReminders")
@@ -929,14 +860,14 @@ def ProcessSteakActions(Call: types.CallbackQuery):
 		DeleteMessageID(User, Call, telemaster, Delete)
 	if Update:
 		EventID = User.get_property("EventID")
-		Name = GetPropertyEvent(User, "Name", EventID)
+		Name = EventsData(User).property_event("Name", EventID)
 		if Update == "WithoutReminders": 
-			remains = Calculator(GetPropertyEvent(User, "Date", EventID))
+			remains = Additional.Calculator(EventsData(User).property_event("Date", EventID))
 			if remains < 0: 
-				skinwalker = str(Skinwalker(GetPropertyEvent(User, "Date", EventID)))
-				remains = str(Calculator(skinwalker))
+				skinwalker = str(Additional.Skinwalker(EventsData(User).property_event("Date", EventID)))
+				remains = str(Additional.Calculator(skinwalker))
 				
-			days = FormatDays(remains, language = "ru")
+			days = Additional.FormatDays(remains, language = "ru")
 			DeleteMessageNotification = Bot.send_message(
 				chat_id = Call.message.chat.id,
 				text = _("Данные сохранены!\n\nДо события <b>$Name</b> осталось $remains $days!\n\nНапоминание о нем придет только <u>день в день</u>! 🛎").replace("$Name", Name).replace("$remains", remains).replace("$days", days),
@@ -946,9 +877,9 @@ def ProcessSteakActions(Call: types.CallbackQuery):
 			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
 
 		if Update == "OnceDay": 
-			Reminder = GetPropertyEvent(User, "Reminder", EventID)
-			Time = GetPropertyEvent(User, "Time", EventID)
-			days = FormatDays(Time, language = "ru")
+			Reminder = EventsData(User).property_event("Reminder", EventID)
+			Time = EventsData(User).property_event("Time", EventID)
+			days = Additional.FormatDays(Time, language = "ru")
 
 			if Reminder == "0": text = "Итак, подытожим!\n\nВаше событие: <b>$Name</b>\n\nНапоминание о нём придёт <b>в $Time день в день!</b> 🛎".replace("$Name", Name).replace("$Time", Time)
 			else: text = "Итак, подытожим!\n\nВаше событие: <b>$Name</b>\n\nНапоминание о нём придёт <b>в 18:30 за $Reminder $days</b>! 🛎".replace("$Name", Name).replace("$Time", Time).replace("$Reminder", Reminder).replace("$days", days)

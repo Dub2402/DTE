@@ -1,5 +1,4 @@
-from Source.Functions import GetFreeID
-from Source.InlineKeyboards import InlineKeyboard
+from Source.UI.InlineKeyboards import InlineKeyboard
 
 from dublib.TelebotUtils import UserData
 from dublib.TelebotUtils.Master import TeleMaster
@@ -9,6 +8,16 @@ import telebot
 from telebot import types
 from telebot.types import ReactionTypeEmoji
 
+def GetFreeID(Events: dict) -> int:
+	""" Получение свободного ID события."""
+	
+	Increment = list()
+	for key in Events.keys(): Increment.append(int(key))
+	Increment.sort()
+	FreeID = 1
+	if Increment: FreeID = max(Increment) + 1
+
+	return FreeID
 
 def MessageWaitingName(Bot: telebot.TeleBot, Message: types.Message, inline_keyboard: InlineKeyboard, User: UserData, text: str, isbutton: bool = True):
 	"""
@@ -19,6 +28,7 @@ def MessageWaitingName(Bot: telebot.TeleBot, Message: types.Message, inline_keyb
 			Cпасибо, чуть позже!
 	Ожидание ввода имени в файле пользователя.
 	"""
+	
 	if isbutton: button = inline_keyboard.SteakActions(name_button = _("Cпасибо, чуть позже!"), delete = "WaitingName")
 	else: button = None
 	WaitingName = Bot.send_message(
@@ -110,13 +120,6 @@ def GetDataEvent(User: UserData):
 	Data = {"Name": Name, "Date": Date, "ReminderFormat": ReminderFormat, "Format": Format, "Reminder": Reminder, "Time": Time}
 
 	return Data
-
-def GetPropertyEvent(User: UserData, property: str, ID: str):
-	"""Получение свойства события по ID."""
-
-	Name = User.get_property("events")[ID][property]
-
-	return Name
 
 def SetDataEvent(User: UserData, Data: dict, FreeID: int):
 	""" Добавление события в словарь всех событий пользователя. """

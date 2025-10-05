@@ -9,7 +9,7 @@ class InlineKeyboard:
 		pass
 
 	def SettingsMenu(self) -> types.InlineKeyboardMarkup:
-		""" Меню настройки уведомлений."""
+		"""Меню настройки уведомлений."""
 
 		menu = types.InlineKeyboardMarkup()
 
@@ -19,39 +19,12 @@ class InlineKeyboard:
 			_("🕰 Время ежедн. напоминаний"): "time_every_reminders",
 			_("🤭 Режим бота"): "bot_mode",
 			_("🔁 Сменить имя и пол"): "Change_name",
-			_("🌐 Сменить часовой пояс"): "change_timezone",
+			_("🌐 Сменить часовой пояс"): "tz_change",
 			_("🔙 Назад"): "Steak_MessageSettings__",
 		}
 
 		for string in determinations.keys(): menu.add(types.InlineKeyboardButton(string, callback_data = determinations[string]), row_width = 1)
 		return menu
-	
-	def AddNewEvent(self) -> types.InlineKeyboardMarkup:
-		"""Кнопка создать событие."""
-
-		Menu = types.InlineKeyboardMarkup()
-
-		Create = types.InlineKeyboardButton(
-			_("Создать событие"), 
-			callback_data = "create_event"
-			)
-		
-		Menu.add(Create)
-
-		return Menu
-
-	def RemoveEvent(self, EventID: int) -> types.InlineKeyboardMarkup:
-		"""Кнопка удаление события."""
-		Menu = types.InlineKeyboardMarkup()
-
-		RemoveEvent = types.InlineKeyboardButton(
-			_("Удалить"), 
-			callback_data = f"remove_event_{EventID}"
-			)
-		
-		Menu.add(RemoveEvent)
-
-		return Menu
 
 	def AddShare(self) -> types.InlineKeyboardMarkup:
 		"""Меню поделиться или выйти назад."""
@@ -273,7 +246,7 @@ class InlineKeyboard:
 		
 		return Menu
 
-	def SendEmoji(self, emoji: str, delete_type: str = "") -> types.InlineKeyboardMarkup:
+	def SendEmoji(emoji: str, delete_type: str = "") -> types.InlineKeyboardMarkup:
 
 		"""
 		Отправляет эмодзи в виде кнопки под сообщением:

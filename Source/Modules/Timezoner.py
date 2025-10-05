@@ -1,4 +1,4 @@
-from Source.InlineKeyboards import InlineKeyboard
+from Source.UI.InlineKeyboards import InlineKeyboard
 
 from dublib.TelebotUtils.Users import UsersManager, UserData
 from dublib.Engine.GetText import _
@@ -62,6 +62,8 @@ def TimezonerDecorators(bot: TeleBot, users: UsersManager, inline_keyboard: Inli
 			reply_markup = TimezonerInlineKeyboards().timezone_second_page()
 		)
 
+		bot.answer_callback_query(Call.id)
+
 	@bot.callback_query_handler(func = lambda Callback: Callback.data == "tz_back")
 	def TimezonesBack(Call: types.CallbackQuery):
 		users.auth(Call.from_user)
@@ -70,6 +72,8 @@ def TimezonerDecorators(bot: TeleBot, users: UsersManager, inline_keyboard: Inli
 			message_id = Call.message.id,
 			reply_markup = TimezonerInlineKeyboards().timezone_first_page()
 		)
+
+		bot.answer_callback_query(Call.id)
 
 	@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("tz_select"))
 	def TimezoneSelect(Call: types.CallbackQuery):
@@ -84,6 +88,28 @@ def TimezonerDecorators(bot: TeleBot, users: UsersManager, inline_keyboard: Inli
 			reply_markup = inline_keyboard.AddNewEvent(),
 			parse_mode = "HTML"
 			)
+		
+		bot.answer_callback_query(Call.id)
+	
+	@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("tz_change"))
+	def TimezoneChange(Call: types.CallbackQuery):
+		User = users.auth(Call.from_user)
+
+		bot.send_message(
+			chat_id = Call.message.chat.id,
+			text = _("Выберите, пожалуйста, ваш новый часовой пояс:"), 
+			reply_markup = TimezonerInlineKeyboards().timezone_first_page(),
+			parse_mode = "HTML"
+			)
+		
+		bot.send_message(
+			chat_id = Call.message.chat.id,
+			text = _("<b>" + _("Для выхода") + "</b>" + _("в предыдущее меню нажмите \"Назад\":")), 
+			reply_markup = inline_keyboard.SteakActions(name_button = _("🔙 Назад"), delete = "MessageNotificationsDeactivate"),
+			parse_mode = "HTML"
+			)
+		
+		bot.answer_callback_query(Call.id)
 
 #==========================================================================================#
 # >>>>> ШАБЛОНЫ <<<<< #

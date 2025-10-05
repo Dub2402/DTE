@@ -1,6 +1,6 @@
-from Source.Functions import FormatDays, Calculator, Skinwalker
-from Source.Timezoner import CorrectUserTime, Replacing_timezone
+from Source.Modules.Timezoner import CorrectUserTime, Replacing_timezone
 from Source.Bot_Addition import DeleteEvent
+from Source.Events import Additional
 
 from dublib.TelebotUtils import UsersManager
 from dublib.Methods.Filesystem import ReadJSON
@@ -130,11 +130,11 @@ class Mailer:
 
 				for i in range(len(MessagesDaily[ID]["Events"])):
 					Name = MessagesDaily[ID]["Events"][i]["Name"]
-					Remain = Calculator(MessagesDaily[ID]["Events"][i]["Date"])
+					Remain = Additional.Calculator(MessagesDaily[ID]["Events"][i]["Date"])
 					if Remain < 0:
-						skinwalker = Skinwalker(MessagesDaily[ID]["Events"][i]["Date"])
-						Remain = Calculator(skinwalker)
-					Days = FormatDays(Remain, self.__language)
+						skinwalker = Additional.Skinwalker(MessagesDaily[ID]["Events"][i]["Date"])
+						Remain = Additional.Calculator(skinwalker)
+					Days = Additional.FormatDays(Remain, self.__language)
 					Reminders.append(_("<b>%s</b> наступит через %s %s!") % (Name, Remain, Days))
 				
 				base = ""
@@ -200,7 +200,7 @@ class Mailer:
 				for i in range(len(MessagesOnce[ID]["Events"])):
 					Name = MessagesOnce[ID]["Events"][i]["Name"]
 					Reminder = MessagesOnce[ID]["Events"][i]["Reminder"]
-					days = FormatDays(int(MessagesOnce[ID]["Events"][i]["Reminder"]), self.__language)
+					days = Additional.FormatDays(int(MessagesOnce[ID]["Events"][i]["Reminder"]), self.__language)
 					try:
 						self.__Bot.send_message(
 						ID, 

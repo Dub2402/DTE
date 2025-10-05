@@ -8,7 +8,7 @@ class ReplyKeyboard:
 		pass
 
 	def AddMenu(self) -> types.ReplyKeyboardMarkup:
-		""" Осовное меню."""
+		""" Основное меню."""
 
 		Menu = types.ReplyKeyboardMarkup(resize_keyboard = True)
 
