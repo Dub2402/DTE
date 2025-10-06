@@ -5,10 +5,7 @@ from telebot import types
 
 class InlineKeyboard:
 
-	def __init__(self):
-		pass
-
-	def SettingsMenu(self) -> types.InlineKeyboardMarkup:
+	def SettingsMenu() -> types.InlineKeyboardMarkup:
 		"""Меню настройки уведомлений."""
 
 		menu = types.InlineKeyboardMarkup()
@@ -26,7 +23,7 @@ class InlineKeyboard:
 		for string in determinations.keys(): menu.add(types.InlineKeyboardButton(string, callback_data = determinations[string]), row_width = 1)
 		return menu
 
-	def AddShare(self) -> types.InlineKeyboardMarkup:
+	def AddShare() -> types.InlineKeyboardMarkup:
 		"""Меню поделиться или выйти назад."""
 		Menu = types.InlineKeyboardMarkup()
 
@@ -40,7 +37,7 @@ class InlineKeyboard:
 
 		return Menu
 
-	def ChoiceGender(self):
+	def ChoiceGender():
 		"""Выбор пола."""
 
 		Menu = types.InlineKeyboardMarkup()
@@ -58,7 +55,7 @@ class InlineKeyboard:
 		
 		return Menu
 	
-	def ChoiceAnotherDay(self) -> types.InlineKeyboardMarkup:
+	def ChoiceAnotherDay() -> types.InlineKeyboardMarkup:
 		"""Выбор другого дня для разового уведомления."""
 
 		Menu = types.InlineKeyboardMarkup()
@@ -72,7 +69,7 @@ class InlineKeyboard:
 		
 		return Menu
 
-	def ChoiceFormat(self) -> types.InlineKeyboardMarkup:
+	def ChoiceFormat() -> types.InlineKeyboardMarkup:
 		"""Меню выбора формата события."""
 
 		Menu = types.InlineKeyboardMarkup()
@@ -90,7 +87,7 @@ class InlineKeyboard:
 		
 		return Menu
 
-	def Saving(self, buttons: list, text_save: str, delete: str = "", reaction: str = "") -> types.InlineKeyboardMarkup:
+	def Saving(buttons: list, text_save: str, delete: str = "", reaction: str = "") -> types.InlineKeyboardMarkup:
 		"""Сохранить ли данные события:
 			buttons: кнопки которые, необходимо добавить в клавиатуру;
 			text_save: текст для кнопки сохранить, если он нужен;
@@ -116,7 +113,7 @@ class InlineKeyboard:
 		
 		return Menu
 
-	def ChoiceFormatReminderStart(self) -> types.InlineKeyboardMarkup:
+	def ChoiceFormatReminderStart() -> types.InlineKeyboardMarkup:
 		"""Выбор типа напоминаний для только что созданного события."""
 
 		Menu = types.InlineKeyboardMarkup()
@@ -134,25 +131,40 @@ class InlineKeyboard:
 		
 		return Menu
 
-	def SettingsNotifications(self, EventID: int, Send: str = "") -> types.InlineKeyboardMarkup:
+	def SettingsNotifications(EventID: int, Send: str = "", new_user: bool = False) -> types.InlineKeyboardMarkup:
 		"""Уточняющее меню выбора напоминаний для только что созданного события."""
 
 		Menu = types.InlineKeyboardMarkup()
+
+		Change = types.InlineKeyboardButton(
+			_("Изменить 🔔"), 
+			callback_data = f"settings_for_{EventID}"
+			)
+		
+		Bote_Mode = types.InlineKeyboardButton(
+			_("Режим бота 🤭"), 
+			callback_data = f"bot_mode"
+			)
 
 		Choice = types.InlineKeyboardButton(
 			_("Настроить напоминания"), 
 			callback_data = f"settings_for_{EventID}"
 			)
+		
 		Steak = types.InlineKeyboardButton(
 			_("Спасибо, все супер!"), 
 			callback_data = f"Steak___{Send}"
 			)
 		
-		Menu.add(Choice, Steak, row_width = 1)
+		if new_user: 
+			Menu.add(Change, Bote_Mode, row_width = 2)
+			Menu.add(Steak, row_width = 2)
+		
+		else: Menu.add(Choice, Steak, row_width = 1)
 
 		return Menu
 
-	def ChoiceFormatReminderNew(self) -> types.InlineKeyboardMarkup:
+	def ChoiceFormatReminderNew() -> types.InlineKeyboardMarkup:
 		"""Дополнительное меню выбора напоминаний для только что созданного события."""
 
 		Menu = types.InlineKeyboardMarkup()
@@ -171,7 +183,7 @@ class InlineKeyboard:
 		
 		return Menu
 	
-	def ChoiceFormatReminderChange(self) -> types.InlineKeyboardMarkup:
+	def ChoiceFormatReminderChange() -> types.InlineKeyboardMarkup:
 		"""Выбор типа напоминаний при изменении напоминаний."""
 		Menu = types.InlineKeyboardMarkup()
 		
@@ -196,7 +208,7 @@ class InlineKeyboard:
 		
 		return Menu
 	
-	def ChoiceEventToChangeReminder(self, EventID: int) -> types.InlineKeyboardMarkup:
+	def ChoiceEventToChangeReminder(EventID: int) -> types.InlineKeyboardMarkup:
 		"""Изменить напоминание при выборе соответствующего напоминания."""
 		Menu = types.InlineKeyboardMarkup()
 
@@ -209,7 +221,7 @@ class InlineKeyboard:
 
 		return Menu
 	
-	def ChoiceEventToRemoveReminder(self, EventID: int) -> types.InlineKeyboardMarkup:
+	def ChoiceEventToRemoveReminder(EventID: int) -> types.InlineKeyboardMarkup:
 		"""Удаление напоминаний."""
 
 		Menu = types.InlineKeyboardMarkup()
@@ -223,7 +235,7 @@ class InlineKeyboard:
 
 		return Menu
 
-	def Confirmation(self, notification_type, subtype: str) -> types.InlineKeyboardMarkup:
+	def Confirmation(notification_type, subtype: str) -> types.InlineKeyboardMarkup:
 
 		"""
 		Подтверждение выбора типа уведомлений:
@@ -265,7 +277,7 @@ class InlineKeyboard:
 
 		return Menu
 
-	def SteakActions(self, name_button: str, emoji: str = "", delete: str = "", update: str = ""):
+	def SteakActions(name_button: str, emoji: str = "", delete: str = "", update: str = ""):
 		"""
 		Меню-конструктор, выполняющий различные действия пользователя.
 			name_button: название кнопки, видимое для пользователя;

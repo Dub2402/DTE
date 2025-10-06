@@ -1,4 +1,5 @@
 from Source.UI.InlineKeyboards import InlineKeyboard
+from Source.Events import InlineTemplates as EventsInlineTemplates
 
 from dublib.TelebotUtils.Users import UsersManager, UserData
 from dublib.Engine.GetText import _
@@ -85,7 +86,7 @@ def TimezonerDecorators(bot: TeleBot, users: UsersManager, inline_keyboard: Inli
 		bot.send_message(
 			chat_id = Call.message.chat.id,
 			text = _("Отлично! Вот и настроили!\n\nПришла пора создать ваше первое событие! 🙌"), 
-			reply_markup = inline_keyboard.AddNewEvent(),
+			reply_markup = EventsInlineTemplates.AddNewEvent(),
 			parse_mode = "HTML"
 			)
 		

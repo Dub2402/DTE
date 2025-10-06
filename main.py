@@ -5,7 +5,7 @@ from Source.TeleBotAdminPanel import Panel
 from Source.UI.InlineKeyboards import InlineKeyboard
 from Source.UI.ReplyKeyboard import ReplyKeyboard
 from Source.Mailer import Mailer
-from Source.Modules.Mode import Modes
+from Source.Modules.Mode import Modes, Data as DataModes
 from Source.Events import Core as CoreEvents, Additional, EventsData
 
 from Source.Modules.Timezoner import TimezonerInlineKeyboards, TimezonerDecorators, CorrectUserTime, Replacing_timezone
@@ -44,7 +44,6 @@ Bot = telebot.TeleBot(Settings["token"])
 telemaster = TeleMaster(Settings["token"])
 Manager = UsersManager("Data/Users")
 reply_keyboard = ReplyKeyboard()
-inline_keyboard = InlineKeyboard()
 AdminPanel = Panel()
 Cacher = TeleCache()
 modes = Modes(Manager, Bot)
@@ -122,7 +121,7 @@ def ProcessInfa(Message: types.Message):
 		Message.chat.id,
 		text = "\n".join(Text),
 		parse_mode = "HTML",
-		reply_markup = inline_keyboard.SteakActions(name_button = _("Ясненько"), delete = "MessageInfo")
+		reply_markup = InlineKeyboard.SteakActions(name_button = _("Ясненько"), delete = "MessageInfo")
 	)
 	User.set_temp_property("MessageInfo", MessageInfo.id)
 
@@ -132,7 +131,7 @@ def ProcessTextNewEvent(Message: types.Message):
 
 	User = Manager.auth(Message.from_user)
 	text = _("Введите, пожалуйста, название события, которое вы так ждёте!")
-	MessageWaitingName(Bot, Message, inline_keyboard, User, text)
+	MessageWaitingName(Bot, Message, InlineKeyboard, User, text)
 
 @Bot.message_handler(content_types = ["text"], regexp = _("🛎 Настройка напоминаний"))
 def ProcessSettingsReminders(Message: types.Message):
@@ -141,7 +140,7 @@ def ProcessSettingsReminders(Message: types.Message):
 	MessageSettings = Bot.send_message(
 		Message.chat.id, 
 		_("Выберите пункт, который вы хотите настроить:"),
-		reply_markup = inline_keyboard.SettingsMenu())
+		reply_markup = InlineKeyboard.SettingsMenu())
 
 	SaveMessageID(User, MessageSettings.id, ["MessageSettings"])
 	
@@ -160,7 +159,7 @@ def ProcessShareWithFriends(Message: types.Message):
 			Message.chat.id, 
 			photo = ShareID.file_id,
 			caption = _("@Dnido_bot\n@Dnido_bot\n@Dnido_bot\n\nПросто <b>Т-т-топовый</b> бот для отсчёта дней до событий 🥳\n\n<b><i>Пользуйся и делись с друзьями!</i></b>"), 
-			reply_markup = inline_keyboard.AddShare(),
+			reply_markup = InlineKeyboard.AddShare(),
 			parse_mode = "HTML" 
 			)
 	except Exception as E: print(f"Проблема с кэшированием файла share_image: {E}")
@@ -184,7 +183,7 @@ def ProcessText(Message: types.Message):
 		Changename = Bot.send_message(
 			Message.chat.id,
 			_("Укажите, пожалуйста, ваш пол. Это для лучшей адаптации бота под вас:"),
-			reply_markup = inline_keyboard.ChoiceGender()
+			reply_markup = InlineKeyboard.ChoiceGender()
 			)
 		SaveMessageID(User, Changename.id, ["Changename"])
 		
@@ -211,7 +210,7 @@ def ProcessText(Message: types.Message):
 			if User.has_property("New_User"): 
 				New_User = True
 				User.remove_property("New_User")
-			DeleteMessageNotification = SendFormatReminders(Bot, inline_keyboard, Message, New_User)
+			DeleteMessageNotification = SendFormatReminders(Bot, InlineKeyboard, Message, New_User)
 			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
 		else:
 			Bot.send_message(
@@ -267,9 +266,9 @@ def ProcessText(Message: types.Message):
 						SetDataEvent(User, Data, FreeID)
 
 					if User.has_property("Oncereminders_button"):
-						if User.get_property("Oncereminders_button") == "start": button = inline_keyboard.Saving(["notSave", "Save"], _("Спасибо!"))
-						if User.get_property("Oncereminders_button") == "new": button = inline_keyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "OnceDay")
-						if User.get_property("Oncereminders_button") == "change": button = inline_keyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "AllReminders")
+						if User.get_property("Oncereminders_button") == "start": button = InlineKeyboard.Saving(["notSave", "Save"], _("Спасибо!"))
+						if User.get_property("Oncereminders_button") == "new": button = InlineKeyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "OnceDay")
+						if User.get_property("Oncereminders_button") == "change": button = InlineKeyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "AllReminders")
 
 						DeleteMessageNotification = Bot.send_message(
 							Message.chat.id, 
@@ -289,7 +288,7 @@ def ProcessText(Message: types.Message):
 		return
 	
 	if User.expected_type == "time":
-		button = inline_keyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "OnceDay")
+		button = InlineKeyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "OnceDay")
 		SaveMessageID(User, Message.id, ["MessageNotificationsChange"])
 		TimeModificated = Message.text.replace(":", "").replace(" ", "")
 		if TimeModificated.isdigit() and Message.text.count(":") == 1 and len(Message.text) >= 3 and len(Message.text) <= 5:
@@ -326,9 +325,9 @@ def ProcessText(Message: types.Message):
 				Name = EventsData(User).property_event("Name", FreeID)
 
 				if User.has_property("Oncereminders_button"):
-						if User.get_property("Oncereminders_button") == "start": button = inline_keyboard.Saving(["Save"], _("Спасибо"))
-						if User.get_property("Oncereminders_button") == "new": button = inline_keyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "OnceDay")
-						if User.get_property("Oncereminders_button") == "change": button = inline_keyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "AllReminders")
+						if User.get_property("Oncereminders_button") == "start": button = InlineKeyboard.Saving(["Save"], _("Спасибо"))
+						if User.get_property("Oncereminders_button") == "new": button = InlineKeyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "OnceDay")
+						if User.get_property("Oncereminders_button") == "change": button = InlineKeyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "AllReminders")
 
 				DeleteMessageNotification = Bot.send_message(
 					Message.chat.id, 
@@ -345,7 +344,7 @@ def ProcessText(Message: types.Message):
 AdminPanel.decorators.inline_keyboards(Bot, Manager)
 modes.decorators.inline_keyboards()
 
-TimezonerDecorators(Bot, Manager, inline_keyboard)
+TimezonerDecorators(Bot, Manager, InlineKeyboard)
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Gender"))
 def InlineButtonsChoiceGender(Call: types.CallbackQuery):
@@ -368,7 +367,7 @@ def InlineButtonsChoiceGender(Call: types.CallbackQuery):
 		chat_id = Call.message.chat.id,
 		text = _("Спасибо большое! $gender_text, $name!)").replace("$gender_text", Gender_text).replace("$name", Call_user),
 		parse_mode = "HTML",
-		reply_markup = inline_keyboard.SendEmoji("🤗")
+		reply_markup = InlineKeyboard.SendEmoji("🤗")
 	)
 		SaveMessageID(User, Changename.id, ["Changename"])
 	else:
@@ -407,10 +406,12 @@ def InlineButtonsFormatDays(Call: types.CallbackQuery):
 		skinwalker = Additional.Skinwalker(Date)
 		remains = str(Additional.Calculator(skinwalker))
 		days = Additional.FormatDays(remains, Settings["language"])
+		if DataModes(User).type == None: reply_markup = InlineKeyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji", new_user = True)
+		else: reply_markup = InlineKeyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji")
 		DeleteMessageNotification = Bot.send_message(
 			chat_id = Call.message.chat.id,
 			text = _("Данные сохранены!\n\nДо события <b>$Name</b> осталось $remains $days!\n\nБудем ждать его вместе с <u>ежедневными напоминаниями!</u> 🛎").replace("$Name", Name).replace("$remains", remains).replace("$days" ,days),
-			reply_markup = inline_keyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji"),
+			reply_markup = reply_markup,
 			parse_mode = "HTML"
 		)
 		SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
@@ -461,7 +462,7 @@ def InlineButtonsSave(Call: types.CallbackQuery):
 	
 	if Saving.startswith("yes"):
 		if Saving == "yes":
-			SendMessagewithEmoji(Bot, Call, inline_keyboard)
+			SendMessagewithEmoji(Bot, Call, InlineKeyboard)
 		
 		else:
 			Reaction = Saving.replace("yes","")
@@ -486,7 +487,7 @@ def InlineButtonCreateEvent(Call: types.CallbackQuery):
 
 	User = Manager.auth(Call.from_user)
 	text = _("Введите, пожалуйста, название события, которое вы так ждёте! 😉 \n\n<i>Например: День рождения</i>")
-	MessageWaitingName(Bot, Call.message, inline_keyboard, User, text, isbutton = False)
+	MessageWaitingName(Bot, Call.message, InlineKeyboard, User, text, isbutton = False)
 
 	Bot.answer_callback_query(Call.id)
 
@@ -535,7 +536,7 @@ def ProcessDeleteReminder(Call: types.CallbackQuery):
 					DeleteMessageNotification = Bot.send_message(
 					Call.message.chat.id,
 					f"{number_event}) " + _("<b>%s</b>\nУстановлены ежедневные напоминания!") % Name,
-					reply_markup = inline_keyboard.ChoiceEventToRemoveReminder(EventID),
+					reply_markup = InlineKeyboard.ChoiceEventToRemoveReminder(EventID),
 					parse_mode = "HTML")
 					SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsDeactivate"])
 					number_event += 1 
@@ -549,7 +550,7 @@ def ProcessDeleteReminder(Call: types.CallbackQuery):
 					DeleteMessageNotification = Bot.send_message(
 						Call.message.chat.id,
 						text = text,
-						reply_markup = inline_keyboard.ChoiceEventToRemoveReminder(EventID),
+						reply_markup = InlineKeyboard.ChoiceEventToRemoveReminder(EventID),
 						parse_mode = "HTML")
 					SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsDeactivate"])
 					number_event += 1 
@@ -558,14 +559,14 @@ def ProcessDeleteReminder(Call: types.CallbackQuery):
 		DeleteMessageNotification = Bot.send_message(
 				Call.message.chat.id, 
 				_("Чтобы отключить напоминания, сначала создайте событие!"),
-				reply_markup = inline_keyboard.AddNewEvent()
+				reply_markup = InlineKeyboard.AddNewEvent()
 				)
 		SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsDeactivate"])
 	
 	DeleteMessageNotification = Bot.send_message(
 		Call.message.chat.id,
 		_("<b>Для выхода</b> в предыдущее меню нажмите \"Назад\":"),
-		reply_markup = inline_keyboard.SteakActions(name_button = _("🔙 Назад"), delete = "MessageNotificationsDeactivate"),
+		reply_markup = InlineKeyboard.SteakActions(name_button = _("🔙 Назад"), delete = "MessageNotificationsDeactivate"),
 		parse_mode = "HTML"
 		)
 	
@@ -621,7 +622,7 @@ def ProcessChange_reminders(Call: types.CallbackQuery):
 					DeleteMessageNotification = Bot.send_message(
 					Call.message.chat.id,
 					f"{number_event}) " + _("<b>%s</b>\nУстановлены ежедневные напоминания!") % Name,
-					reply_markup = inline_keyboard.ChoiceEventToChangeReminder(EventID),
+					reply_markup = InlineKeyboard.ChoiceEventToChangeReminder(EventID),
 					parse_mode = "HTML")
 					SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
 	
@@ -635,7 +636,7 @@ def ProcessChange_reminders(Call: types.CallbackQuery):
 					DeleteMessageNotification = Bot.send_message(
 						Call.message.chat.id,
 						text = text,
-						reply_markup = inline_keyboard.ChoiceEventToChangeReminder(EventID),
+						reply_markup = InlineKeyboard.ChoiceEventToChangeReminder(EventID),
 						parse_mode = "HTML")
 					SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
 	
@@ -643,7 +644,7 @@ def ProcessChange_reminders(Call: types.CallbackQuery):
 					DeleteMessageNotification = Bot.send_message(
 						Call.message.chat.id,
 						f"{number_event}) " + _("<b>%s</b>\nНапоминание отключено!") % (Name),
-						reply_markup = inline_keyboard.ChoiceEventToChangeReminder(EventID),
+						reply_markup = InlineKeyboard.ChoiceEventToChangeReminder(EventID),
 						parse_mode = "HTML")
 					SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
 				number_event += 1 		
@@ -652,7 +653,7 @@ def ProcessChange_reminders(Call: types.CallbackQuery):
 			DeleteMessageNotification = Bot.send_message(
 					Call.message.chat.id, 
 					text = _("Чтобы изменить напоминание, сначала создайте событие!"),
-					reply_markup = inline_keyboard.AddNewEvent()
+					reply_markup = InlineKeyboard.AddNewEvent()
 					)
 			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
 		
@@ -660,7 +661,7 @@ def ProcessChange_reminders(Call: types.CallbackQuery):
 		DeleteMessageNotification = Bot.send_message(
 					Call.message.chat.id, 
 					text = _("Чтобы изменить напоминание, сначала создайте событие!"),
-					reply_markup = inline_keyboard.AddNewEvent()
+					reply_markup = InlineKeyboard.AddNewEvent()
 					)
 		SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
 		
@@ -668,7 +669,7 @@ def ProcessChange_reminders(Call: types.CallbackQuery):
 	DeleteMessageNotification = Bot.send_message(
 		Call.message.chat.id,
 		_("<b>Для выхода</b> в предыдущее меню нажмите \"Назад\":"),
-		reply_markup = inline_keyboard.SteakActions(name_button = _("🔙 Назад"), delete = "MessageNotificationsChange"),
+		reply_markup = InlineKeyboard.SteakActions(name_button = _("🔙 Назад"), delete = "MessageNotificationsChange"),
 		parse_mode = "HTML"
 		)
 	SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
@@ -685,7 +686,7 @@ def InlineButtonChoiceEventToAddReminder(Call: types.CallbackQuery):
 	DeleteMessageNotification = Bot.send_message(
 		Call.message.chat.id,
 		_("Выберите тип напоминания для события <b>%s</b>:") % Name,
-		reply_markup = inline_keyboard.ChoiceFormatReminderChange(),
+		reply_markup = InlineKeyboard.ChoiceFormatReminderChange(),
 		parse_mode = "HTML"
 	)
 	SaveMessageID(User, DeleteMessageNotification.id, ["Leavechangenotifications", "MessageNotificationsChange"])
@@ -698,7 +699,7 @@ def InlineButtonSettingsforReminder(Call: types.CallbackQuery):
 	DeleteMessageNotification = Bot.send_message(
 		Call.message.chat.id,
 		_("Выберите тип напоминания:"),
-		reply_markup = inline_keyboard.ChoiceFormatReminderNew()
+		reply_markup = InlineKeyboard.ChoiceFormatReminderNew()
 		)
 	SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
 	Bot.answer_callback_query(Call.id)
@@ -720,14 +721,17 @@ def ProcessEveryDayReminders(Call: types.CallbackQuery):
 			DeleteMessageNotification = Bot.send_message(
 				Call.message.chat.id,
 				text = _("Укажите, какой формат отсчёта вам показывать?"),
-				reply_markup = inline_keyboard.ChoiceFormat()
+				reply_markup = InlineKeyboard.ChoiceFormat()
 			)
 			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
+
 		elif remains == 0: 
+			if DataModes(User).type == None: reply_markup = InlineKeyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji", new_user = True)
+			else: reply_markup = InlineKeyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji")
 			DeleteMessageNotification = Bot.send_message(
 				chat_id = Call.message.chat.id,
 				text = _("Данные сохранены!\n\nВаше событие $Name сегодня!!! 😊".replace("$Name", Name)),
-				reply_markup = inline_keyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji"),
+				reply_markup = reply_markup,
 				parse_mode = "HTML"
 			)
 			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
@@ -735,11 +739,13 @@ def ProcessEveryDayReminders(Call: types.CallbackQuery):
 			SetDataEvent(User, Data, EventID)
 
 		else:
+			if DataModes(User).type == None: reply_markup = InlineKeyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji", new_user = True)
+			else: reply_markup = InlineKeyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji")
 			days = Additional.FormatDays(remains, Settings["language"])
 			DeleteMessageNotification = Bot.send_message(
 				chat_id = Call.message.chat.id,
 				text = _("Данные сохранены!\n\nДо события <b>$Name</b> осталось $remains $days!\n\nБудем ждать его вместе с <u>ежедневными напоминаниями!</u> 🛎").replace("$Name", Name).replace("$remains", str(remains)).replace("$days", days),
-				reply_markup = inline_keyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji"),
+				reply_markup = reply_markup,
 				parse_mode = "HTML"
 			)
 			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
@@ -752,7 +758,7 @@ def ProcessEveryDayReminders(Call: types.CallbackQuery):
 			Call.message.chat.id,
 			_("Вы хотите включить ежедневные напоминания для события <b>$Name</b>?").replace("$Name", Name),
 			parse_mode = "HTML",
-			reply_markup = inline_keyboard.Confirmation("EveryNotifications", subtype)
+			reply_markup = InlineKeyboard.Confirmation("EveryNotifications", subtype)
 			)
 		SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
 
@@ -765,13 +771,13 @@ def ProcessOnceDayReminders(Call: types.CallbackQuery):
 	EventID = User.get_property("EventID")
 
 	if isEventExist(User, EventID) and EventsData(User).property_event("Format", EventID) == "Passed":
-		DeleteMessageNotification = SendChangeFormat(Bot, Call, inline_keyboard)
+		DeleteMessageNotification = SendChangeFormat(Bot, Call, InlineKeyboard)
 		return
 
 	DeleteMessageNotification = Bot.send_message(
 			Call.message.chat.id,
 			_("В день события мы вам пришлём напоминание! 🛎 \n\nВ какое время вы бы хотели получить его?\n\n<i>Пример: 18:30</i>"),
-			reply_markup = inline_keyboard.ChoiceAnotherDay(),
+			reply_markup = InlineKeyboard.ChoiceAnotherDay(),
 			parse_mode = "HTML"
 			)
 	User.set_expected_type("time")
@@ -791,7 +797,7 @@ def ProcessWithoutReminders(Call: types.CallbackQuery):
 	DeleteMessageNotification = Bot.send_message(
 		Call.message.chat.id,
 		text,
-		reply_markup = inline_keyboard.Confirmation("WithoutNotifications", subtype),
+		reply_markup = InlineKeyboard.Confirmation("WithoutNotifications", subtype),
 		parse_mode = "HTML"
 		)
 	SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
@@ -807,8 +813,8 @@ def ProcessConfirmation(Call: types.CallbackQuery):
 	Name = EventsData(User).property_event("Name", EventID)
 
 	if notification_type == "WithoutNotifications":
-		if subtype == "change": button = inline_keyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "AllReminders")
-		else: button = inline_keyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "WithoutReminders")
+		if subtype == "change": button = InlineKeyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "AllReminders")
+		else: button = InlineKeyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "WithoutReminders")
 
 		Data = {"ReminderFormat": "WithoutReminders", "Reminder": None, "Time": None}
 		DeleteMessageNotification = Bot.send_message(
@@ -824,7 +830,7 @@ def ProcessConfirmation(Call: types.CallbackQuery):
 		DeleteMessageNotification = Bot.send_message(
 		Call.message.chat.id,
 			_("Для события <b>%s</b> ежедневные напоминания включены!") % Name,
-			reply_markup = inline_keyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "AllReminders"),
+			reply_markup = InlineKeyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "AllReminders"),
 			parse_mode = "HTML"
 		)
 		SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
@@ -840,7 +846,7 @@ def ProcessChangeName(Call: types.CallbackQuery):
 	WaitingName = Bot.send_message(
 		Call.message.chat.id,
 		_("Напишите свое новое имя!"),
-		reply_markup = inline_keyboard.SteakActions(name_button =_("Спасибо, ещё не придумал)"), delete = "WaitingName")
+		reply_markup = InlineKeyboard.SteakActions(name_button =_("Спасибо, ещё не придумал)"), delete = "WaitingName")
 		)
 	User.set_expected_type("call")
 	SaveMessageID(User, WaitingName.id, ["WaitingName", "Changename"])
@@ -871,7 +877,7 @@ def ProcessSteakActions(Call: types.CallbackQuery):
 			DeleteMessageNotification = Bot.send_message(
 				chat_id = Call.message.chat.id,
 				text = _("Данные сохранены!\n\nДо события <b>$Name</b> осталось $remains $days!\n\nНапоминание о нем придет только <u>день в день</u>! 🛎").replace("$Name", Name).replace("$remains", remains).replace("$days", days),
-				reply_markup = inline_keyboard.SettingsNotifications(EventID),
+				reply_markup = InlineKeyboard.SettingsNotifications(EventID),
 				parse_mode = "HTML"
 			)
 			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
@@ -887,14 +893,14 @@ def ProcessSteakActions(Call: types.CallbackQuery):
 
 				chat_id = Call.message.chat.id,
 				text = text,
-				reply_markup = inline_keyboard.SettingsNotifications(EventID),
+				reply_markup = InlineKeyboard.SettingsNotifications(EventID),
 				parse_mode = "HTML"
 			)
 			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
 
 		if Update == "AllReminders":
 			ProcessChange_reminders(Call)
-	if Send: SendMessagewithEmoji(Bot, Call, inline_keyboard)
+	if Send: SendMessagewithEmoji(Bot, Call, InlineKeyboard)
 	Bot.answer_callback_query(Call.id)
 
 @Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Emoji"))

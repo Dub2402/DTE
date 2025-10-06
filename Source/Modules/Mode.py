@@ -10,7 +10,7 @@ import logging
 
 ModesParameters = MappingProxyType(
 	{
-	"type": "classic"
+	"type": None
 	}
 )
 
@@ -189,11 +189,6 @@ class Decorators:
 				reply_markup = InlineTemplates.modes_bot()
 				)
 			
-			self.__modes.master_bot.safely_delete_messages(
-				Call.message.chat.id,
-				Call.message.id
-				)
-			
 			self.__modes.bot.answer_callback_query(Call.id)
 
 		@self.__modes.bot.callback_query_handler(func = lambda Callback: Callback.data == "approve_18")
@@ -305,6 +300,7 @@ class Decorators:
 				Call.message.chat.id,
 				Call.message.id
 				)
+			Data(user = user).set_type_mode(type_mode = Call.data.split("_")[-1])
 			
 			self.__modes.bot.answer_callback_query(Call.id)
 
