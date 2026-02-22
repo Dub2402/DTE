@@ -1,7 +1,7 @@
-from Source.UI.InlineKeyboards import InlineKeyboard
-from Source.Events import InlineTemplates as EventsInlineTemplates
+from Source.UI import InlineKeyboards
+from Source.Modules.Eventer import InlineKeyboards as EventsInlineKeyboards
 
-from dublib.TelebotUtils.Users import UsersManager, UserData
+from dublib.TelebotUtils.Users import UsersManager
 from dublib.Engine.GetText import _
 
 from datetime import datetime, timedelta, timezone
@@ -23,6 +23,7 @@ def CorrectUserTime(user_time: str, delta: int) -> datetime:
 	:return: Скорректированное время в формате **%H:%M**.
 	:rtype: datetime
 	"""
+	
 	UserHour, UserMinute = user_time.split(":")
 	UserHour = int(UserHour)
 	Today = datetime.now(timezone.utc) + timedelta(hours = delta)
@@ -32,19 +33,13 @@ def CorrectUserTime(user_time: str, delta: int) -> datetime:
 	Delta = timedelta(hours = delta)
 	CorrectedTime = UserTime - Delta
 
-	return CorrectedTime.replace(tzinfo=timezone.utc)
-
-def Replacing_timezone(User: UserData) -> int:
-	if User.has_property("timezone"): Delta = User.get_property("timezone")
-	else: Delta = 3
-
-	return Delta
+	return CorrectedTime.replace(tzinfo = timezone.utc)
 
 #==========================================================================================#
 # >>>>> НАБОРЫ ДЕКОРАТОРОВ <<<<< #
 #==========================================================================================#
 
-def TimezonerDecorators(bot: TeleBot, users: UsersManager, inline_keyboard: InlineKeyboard):
+def TimezonerDecorators(bot: TeleBot, users: UsersManager, inline_keyboard: InlineKeyboards):
 	"""
 	Набор декораторов для обработки выбора часового пояса.
 
@@ -86,7 +81,7 @@ def TimezonerDecorators(bot: TeleBot, users: UsersManager, inline_keyboard: Inli
 		bot.send_message(
 			chat_id = Call.message.chat.id,
 			text = _("Отлично! Вот и настроили!\n\nПришла пора создать ваше первое событие! 🙌"), 
-			reply_markup = EventsInlineTemplates.AddNewEvent(),
+			reply_markup = EventsInlineKeyboards.add_new_event(),
 			parse_mode = "HTML"
 			)
 		
@@ -122,8 +117,6 @@ class TimezonerInlineKeyboards:
 	def __init__(self):
 		"""Коллекция генераторов Inline-интерфейса."""
 
-		#---> Генерация динамических свойств.
-		#==========================================================================================#
 		self.__MainTimezones = {
 			1: _("Берлин"),
 			7: _("Бангкок"),

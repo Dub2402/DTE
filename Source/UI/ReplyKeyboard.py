@@ -2,21 +2,16 @@ from dublib.Engine.GetText import _
 
 from telebot import types
 
-class ReplyKeyboard:
+def menu() -> types.ReplyKeyboardMarkup:
+	"""Главное меню."""
 
-	def __init__(self):
-		pass
+	menu = types.ReplyKeyboardMarkup(resize_keyboard = True)
+	buttons = [
+		types.KeyboardButton("✏️ " + _("Новое событие")), 
+		types.KeyboardButton("📜 " + _("Мои события")), 
+		types.KeyboardButton("🛎 " + _("Настройка напоминаний")), 
+		types.KeyboardButton("👄 " + _("Поделиться с друзьями"))
+	] 
+	menu.add(*buttons, row_width = 2)
 
-	def AddMenu(self) -> types.ReplyKeyboardMarkup:
-		""" Основное меню."""
-
-		Menu = types.ReplyKeyboardMarkup(resize_keyboard = True)
-
-		CreateEvent = types.KeyboardButton("✏️ " + _("Новое событие"))
-		ListEvents = types.KeyboardButton("📜 " + _(" Мои события"))
-		List = types.KeyboardButton(_("🛎 Настройка напоминаний"))
-		Share = types.KeyboardButton(_("👄 Поделиться с друзьями"))
-
-		Menu.add(CreateEvent, ListEvents, List, Share, row_width = 2)
-		
-		return Menu
+	return menu
