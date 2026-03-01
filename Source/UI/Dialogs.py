@@ -1,4 +1,4 @@
-from Source.Modules.Eventer import InlineKeyboards as EventsInlineKeyboards, EventTypes
+from Source.Modules.Eventer import InlineKeyboards as EventsInlineKeyboards, EventTypes, Event
 from Source.Core.Enums import TrashMessagesTypes, MediaPath, BotModes
 from Source.Modules.Timezoner import TimezonerInlineKeyboards
 from Source.Core.ExtendedUser import ExtendedUser
@@ -250,6 +250,22 @@ class UserDialogs:
 
 		extended_user.remember_trash_message(reminder_format_message.id, TrashMessagesTypes.settings_notifications)
 
+	def ask_format_counting(self, extended_user: ExtendedUser):
+		"""
+		Отправляет сообщение о том, что необходимо выбрать формат отслеживания события.
+
+		:param extended_user: Расширенные данные пользователя.
+		:type extended_user: ExtendedUser
+		"""
+
+		format_counting_message = self.__bot.send_message(
+			extended_user.user.id,
+			text = _("Укажите, какой формат отсчёта вам показывать?"),
+			reply_markup = EventsInlineKeyboards.counter_type()
+		)
+		
+		extended_user.remember_trash_message(format_counting_message.id, TrashMessagesTypes.new_event)
+
 	def my_events(self, extended_user: ExtendedUser):
 		"""
 		Отправляет приветственное сообщение и сообщения со всеми событиями.
@@ -283,32 +299,10 @@ class UserDialogs:
 
 			difference = event.calculate_date_difference()
 			
-			if difference == 0: 
-				self.my_event(EventTypes.today, number_event, event.id)
-				continue
+			if difference == 0: self.my_event(extended_user, EventTypes.today, number_event, event.id, difference)
 
-			if event.type == EventTypes.passed:
-				self.my_event(EventTypes.passed, number_event, event.id, difference)
-				continue
+			else: self.my_event(extended_user, event.counter_type, number_event, event.id, difference)
 				
-			if event.type == EventTypes.remained:
-
-				if event.is_date_passed:
-
-					if event.is_date_passed_this_year: 
-						difference = event.calculate_date_difference(datetime_date.today().year + 1)
-						self.my_event(EventTypes.remained, number_event, event.id, difference)
-						continue
-
-					else: 
-						difference = event.calculate_date_difference(datetime_date.today().year)
-						self.my_event(EventTypes.remained, number_event, event.id, difference)
-						continue
-
-				else:
-					self.my_event(EventTypes.remained, number_event, event.id, difference)
-					continue
-
 			number_event += 1 		
 			sleep(0.1)
 
@@ -323,10 +317,16 @@ class UserDialogs:
 		"""
 		Отправка сообщений события.
 
-		:param name: Имя события.
-		:type name: str
-		:param EventID: ID события.
-		:type EventID: int
+		:param extended_user: Расширенные данные пользователя.
+		:type extended_user: ExtendedUser
+		:param event_type: Тип события.
+		:type event_type: EventTypes
+		:param number_event: Порядковый номер события.
+		:type number_event: int
+		:param event_id: ID события.
+		:type event_id: int
+		:param difference: Количество дней между событиями.
+		:type difference: int
 		"""
 
 		event = extended_user.eventer[event_id]
@@ -337,7 +337,7 @@ class UserDialogs:
 			EventTypes.passed: "$number_event) " + _("Событие <b>$name</b> было $remains $days назад!")
 		}
 
-		Replaces = {
+		replaces = {
 			"$name": event.name,
 			"$remains": str(difference),
 			"$days": event.formating_word_day(difference),
@@ -346,7 +346,7 @@ class UserDialogs:
 
 		final_text: str = texts[event_type]
 
-		for start_replace in Replaces.keys(): final_text = final_text.replace(start_replace, Replaces[start_replace])
+		for start_replace in replaces.keys(): final_text = final_text.replace(start_replace, replaces[start_replace])
 		
 		event_message = self.__bot.send_message(
 			chat_id = extended_user.user.id,
@@ -356,6 +356,49 @@ class UserDialogs:
 		)
 			
 		extended_user.remember_trash_message(event_message.id, TrashMessagesTypes.my_events)
+
+	def save_counting_event(self, extended_user: ExtendedUser, event: Event):
+
+		"""
+		Отправка сообщения о том, что сообщение сохранено.
+
+		:param extended_user: Расширенные данные пользователя.
+		:type extended_user: ExtendedUser
+		:param event_type: Тип события.
+		:type event_type: EventTypes
+		"""	
+
+		texts = {
+			EventTypes.today: _("Ваше событие $name сегодня!!! 😊"),
+			EventTypes.remained: _("До события <b>$name</b> осталось $remains $days!\n\nБудем ждать его вместе с <u>ежедневными напоминаниями!</u> 🛎"),
+			EventTypes.passed: _("Ваше событие <b>$name</b> произошло $remains $days назад!")
+		}
+
+		difference = event.calculate_date_difference()
+
+		event_type = EventTypes.today if difference == 0 else event.counter_type
+		final_text: str = _("Данные сохранены!\n\n") + texts[event_type]
+
+		replaces = {
+			"$name": event.name,
+			"$remains": str(abs(difference)),
+			"$days": event.formating_word_day(difference)
+		}
+		for start_replace in replaces.keys(): final_text = final_text.replace(start_replace, replaces[start_replace])
+
+		event_message = self.__bot.send_message(
+			chat_id = extended_user.user.id,
+			text = final_text,
+			parse_mode = "HTML",
+			reply_markup = EventsInlineKeyboards.change_reminder_after_saving_event(extended_user, event.id)
+		)
+
+		extended_user.remember_trash_message(event_message.id, TrashMessagesTypes.new_event)
+
+	# 	if Format == "Remained":
+# 		skinwalker = Additional.Skinwalker(Date)
+# 		remains = str(Additional.Calculator(skinwalker))
+# 		days = Additional.FormatDays(remains, Settings["language"]) 		
 
 	def notifications_options(self, user: UserData):
 

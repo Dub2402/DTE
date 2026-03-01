@@ -1,6 +1,7 @@
 from Source.Modules.Timezoner import TimezonerInlineKeyboards, TimezonerDecorators
 from Source.Core.ExtendedUser import ExtendedUser
 from Source.Core.Enums import TrashMessagesTypes
+from Source.Modules.Eventer import EventTypes
 from Source.TeleBotAdminPanel import Panel
 from Source.UI.Dialogs import UserDialogs
 from Source.UI import InlineKeyboards
@@ -69,9 +70,10 @@ def start(message: types.Message):
 		user.set_property("mode", "classic")
 		user.set_property("is_mode_choice", False)
 		user.set_property("create_reminder", True)
+		user.set_property("change_reminder_after_saving_mode_bot", True)
 
 	user.set_property("events", {}, force = False)
-	user.set_property("is_male", None, force = False)
+	user.set_property("is_male", True)
 	user.set_property("emoji", False)
 	user.reset_expected_type()
 	user.suppress_saving(False)
@@ -135,6 +137,8 @@ def text(message: types.Message):
 			dialogs.ask_gender(user)
 
 		case "name":
+			temporary_event = extended_user.eventer.temp_event
+			if temporary_event:  extended_user.eventer.remove_event(temporary_event.id)
 			new_event = extended_user.eventer.create_event()
 			new_event.set_name(message.text)
 			dialogs.ask_date_event(user)
@@ -190,19 +194,37 @@ def create_event(call: types.CallbackQuery):
 
 	bot.answer_callback_query(call.id)
 
-@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("counting"))
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("count_down_event"))
 def counting(call: types.CallbackQuery):
 
 	user = manager.auth(call.from_user)
-	user.set_temp_property("new_event_notifications", True)
+	extended_user = ExtendedUser(user)
+	new_event = extended_user.eventer.temp_event
 
-	
-
-
+	new_event.switching_notifications(True)
+	if new_event.is_date_passed: dialogs.ask_format_counting(extended_user)
+	else: 
+		new_event.set_counter_type(EventTypes.remained)
+		dialogs.save_counting_event(extended_user, new_event)
+		new_event.untemp()
 
 	bot.answer_callback_query(call.id)
 
-@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("one_time"))
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("counter_"))
+def save_counter_type(call: types.CallbackQuery):
+
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+	new_event = extended_user.eventer.temp_event
+
+	counter_type = call.data.split("_")[-1]
+	new_event.set_counter_type(EventTypes(counter_type))
+	dialogs.save_counting_event(extended_user, new_event)
+	new_event.untemp()
+
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("one_time_reminder"))
 def one_time(call: types.CallbackQuery):
 
 	user = manager.auth(call.from_user)
@@ -210,55 +232,3 @@ def one_time(call: types.CallbackQuery):
 	bot.answer_callback_query(call.id)
 
 bot.infinity_polling()
-
-
-
-	# if subtype == "start": 
-	# 	User.set_property("Oncereminders_button", subtype)
-	# 	remains = Additional.Calculator(User.get_property("Date"))
-	# 	if remains < 0: 
-	# 		DeleteMessageNotification = Bot.send_message(
-	# 			Call.message.chat.id,
-	# 			text = _("Укажите, какой формат отсчёта вам показывать?"),
-	# 			reply_markup = InlineKeyboard.ChoiceFormat()
-	# 		)
-	# 		SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-
-	# 	elif remains == 0: 
-	# 		if DataModes(User).type == None: reply_markup = InlineKeyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji", new_user = True)
-	# 		else: reply_markup = InlineKeyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji")
-	# 		DeleteMessageNotification = Bot.send_message(
-	# 			chat_id = Call.message.chat.id,
-	# 			text = _("Данные сохранены!\n\nВаше событие $Name сегодня!!! 😊".replace("$Name", Name)),
-	# 			reply_markup = reply_markup,
-	# 			parse_mode = "HTML"
-	# 		)
-	# 		SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-	# 		Data = GetDataEvent(User)
-	# 		SetDataEvent(User, Data, EventID)
-
-	# 	else:
-	# 		if DataModes(User).type == None: reply_markup = InlineKeyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji", new_user = True)
-	# 		else: reply_markup = InlineKeyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji")
-	# 		days = Additional.FormatDays(remains, Settings["language"])
-	# 		DeleteMessageNotification = Bot.send_message(
-	# 			chat_id = Call.message.chat.id,
-	# 			text = _("Данные сохранены!\n\nДо события <b>$Name</b> осталось $remains $days!\n\nБудем ждать его вместе с <u>ежедневными напоминаниями!</u> 🛎").replace("$Name", Name).replace("$remains", str(remains)).replace("$days", days),
-	# 			reply_markup = reply_markup,
-	# 			parse_mode = "HTML"
-	# 		)
-	# 		SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-	# 		Data = GetDataEvent(User)
-	# 		SetDataEvent(User, Data, EventID)
-
-	# if subtype == "change":
-	# 	Name = EventsData(User).property_event("Name", EventID)
-	# 	DeleteMessageNotification = Bot.send_message(
-	# 		Call.message.chat.id,
-	# 		_("Вы хотите включить ежедневные напоминания для события <b>$Name</b>?").replace("$Name", Name),
-	# 		parse_mode = "HTML",
-	# 		reply_markup = InlineKeyboard.Confirmation("EveryNotifications", subtype)
-	# 		)
-	# 	SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-
-	# Bot.answer_callback_query(Call.id)

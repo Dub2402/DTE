@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 class EventTypes(enum.Enum):
 	passed = "passed"
 	remained = "remained"
+	today = "today"
 
 class Event:
 	"""Событие."""
@@ -42,10 +43,10 @@ class Event:
 		return self.__date
 
 	@property
-	def type(self) -> EventTypes | None:
+	def counter_type(self) -> EventTypes | None:
 		"""Тип события."""
 
-		return EventTypes(self.__data["type"]) if self.__data.get("type") else None
+		return EventTypes(self.__data["counter_type"]) if self.__data.get("counter_type") else None
 
 	@property
 	def reminder(self) -> ReminderData | None:
@@ -63,13 +64,13 @@ class Event:
 	def is_date_passed(self) -> bool: 
 		"""Состояние: прошла ли эта дата."""
 		
-		return datetime.today() > self.date
+		return datetime_date.today() > self.date
 	
 	@property
 	def is_date_passed_this_year(self) -> bool: 
 		"""Состояние: прошла ли эта дата в этом году."""
 		
-		return datetime.today() > self.date.replace(year = datetime_date.today().year)
+		return datetime_date.today() > self.date.replace(year = datetime_date.today().year)
 
 	def __parse_reminder_data(self, data: dict[str, int | str]) -> ReminderData | None:
 		"""
@@ -111,29 +112,27 @@ class Event:
 		}
 		if is_temp: self.__data["is_temp"] = True
 		
-
-		self.__date = dateparser.parse(self.__data["date"]).date() if data else None
+		self.__date = dateparser.parse(self.__data["date"], settings = {"DATE_ORDER": "DMY", "STRICT_PARSING": True}).date() if self.__data["date"] else None
 		self.__reminder_data = self.__parse_reminder_data(self.__data["reminder"])
 
-	def calculate_date_difference(self, target_datetime: datetime_date | None = None, replacing_year: bool = False) -> int:
+	def calculate_date_difference(self) -> int:
 		"""
 		Разница в днях между датой события и указанной датой.
 
-		:param target_datetime: Дата для вычисления разницы. Если указано `None`, будет использована текущая.
-		:type target_datetime: datetime_date | None
-		:param replacing_year: Нужно ли переключать год на текущий.
-		:type replacing_year: bool
 		:return: Разница в датах.
 		:rtype: int
 		"""
 
-		if not target_datetime: target_datetime = datetime_date.today()
-		self.date.replace(year = replacing_year) if replacing_year else self.date
+		event_date = self.date
 
-		delta = self.date - target_datetime
+		if self.counter_type == EventTypes.remained and self.is_date_passed:
+			year = datetime_date.today().year + 1 if self.is_date_passed_this_year else datetime_date.today().year
+			event_date = event_date.replace(year = year)
 
-		return delta.days	
+		delta = event_date - datetime_date.today()
 
+		return abs(delta.days)
+		
 	def formating_word_day(self, difference: int) -> str:
 		"""
 		Согласовывает слово "день" по падежу, числу и языку.
@@ -186,7 +185,7 @@ class Event:
 		self.__data["date"] = date.strftime("%d-%m-%Y")
 		self.save()
 
-	def set_type(self, type: EventTypes):
+	def set_counter_type(self, counter_type: EventTypes):
 		"""
 		Задаёт тип события.
 
@@ -194,7 +193,7 @@ class Event:
 		:type type: EventTypes 
 		"""
 
-		self.__data["type"] = type.value
+		self.__data["counter_type"] = counter_type.value
 		self.save()
 
 	def set_reminder(self, reminder: ReminderData | None):
@@ -229,7 +228,7 @@ class Event:
 		"""
 
 		Buffer = self.__data.copy()
-		if self.__is_temp: Buffer["is_temp"] = True
+		if self.is_temp: Buffer["is_temp"] = True
 
 		return Buffer
 
@@ -251,7 +250,7 @@ class Eventer:
 		:rtype: tuple[Event]
 		"""
 
-		return tuple(self.__events)
+		return tuple(self.__events.values())
 	
 	@property
 	def events_id(self) -> tuple[int]:
