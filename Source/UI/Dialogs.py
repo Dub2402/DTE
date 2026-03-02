@@ -250,6 +250,41 @@ class UserDialogs:
 
 		extended_user.remember_trash_message(reminder_format_message.id, TrashMessagesTypes.settings_notifications)
 
+	def ask_time_reminder(self, extended_user: ExtendedUser):
+		"""
+		Отправляет сообщение о необходимости выбрать время для напоминаний.
+
+		:param extended_user: Расширенные данные пользователя.
+		:type extended_user: ExtendedUser
+		"""
+
+		time_reminder_message = self.__bot.send_message(
+			chat_id = extended_user.user.id,
+			text = _("В день события мы вам пришлём напоминание! 🛎 \n\nВ какое время вы бы хотели получить его?\n\n<i>Пример: 18:30</i>"),
+			reply_markup = EventsInlineKeyboards.choice_another_day(),
+			parse_mode = "HTML"
+			)
+		
+		extended_user.remember_trash_message(time_reminder_message.id, TrashMessagesTypes.new_event)
+
+	def ask_day_and_time_reminder(self, extended_user: ExtendedUser):
+		"""
+		Отправляет сообщение о необходимости выбрать время и дату для напоминаний.
+
+		:param extended_user: Расширенные данные пользователя.
+		:type extended_user: ExtendedUser
+		"""
+
+		working_event = extended_user.eventer.working_event
+
+		day_and_time_reminder_message = self.__bot.send_message(
+			chat_id = extended_user.user.id,
+			text = _("Укажите, за сколько дней и в какое время вам напомнить о событии <b>$name</b>? 🔊\n\n<i>Пример: 10 18:30 (означает за 10 дней и в 18:30)</i>").replace("$name", working_event.name),
+			parse_mode = "HTML"
+			)
+
+		extended_user.remember_trash_message(day_and_time_reminder_message.id, TrashMessagesTypes.new_event)
+
 	def ask_format_counting(self, extended_user: ExtendedUser):
 		"""
 		Отправляет сообщение о том, что необходимо выбрать формат отслеживания события.
@@ -394,12 +429,7 @@ class UserDialogs:
 		)
 
 		extended_user.remember_trash_message(event_message.id, TrashMessagesTypes.new_event)
-
-	# 	if Format == "Remained":
-# 		skinwalker = Additional.Skinwalker(Date)
-# 		remains = str(Additional.Calculator(skinwalker))
-# 		days = Additional.FormatDays(remains, Settings["language"]) 		
-
+	
 	def notifications_options(self, user: UserData):
 
 		settings_notifications = self.__bot.send_message(user.id, _("Выберите пункт, который вы хотите настроить:"), reply_markup = InlineKeyboards.settingsmenu())

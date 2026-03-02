@@ -154,6 +154,9 @@ def text(message: types.Message):
 			
 			user.reset_expected_type()
 			dialogs.ask_reminder_format(extended_user)
+		
+		case "reminder":
+			pass
 	
 		case _:
 			if len(message.text) > 2:
@@ -228,7 +231,23 @@ def save_counter_type(call: types.CallbackQuery):
 def one_time(call: types.CallbackQuery):
 
 	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+
+	dialogs.ask_time_reminder(extended_user)
+	user.set_expected_type("reminder_data")
 
 	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("another_day"))
+def InlineButtonAnotherDay(Call: types.CallbackQuery):
+	"""Отправка сообщения для выбора дня и времени разовых напоминаний."""
+	
+	user = manager.auth(Call.from_user)
+	extended_user = ExtendedUser(user)
+
+	dialogs.ask_day_and_time_reminder(extended_user)
+	user.set_expected_type("reminder_data")
+	
+	bot.answer_callback_query(Call.id)
 
 bot.infinity_polling()

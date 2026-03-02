@@ -1,7 +1,8 @@
 from .ReminderStructs import ReminderData, ReminderTime
-from typing import Any, TYPE_CHECKING
+from Source.Core.Enums import PropertiesUser
 
-from datetime import datetime, date as datetime_date
+from typing import Any, TYPE_CHECKING
+from datetime import date as datetime_date
 import enum
 import os
 
@@ -236,6 +237,7 @@ class Event:
 		"""Выводит событие из временного режима."""
 
 		del self.__data["is_temp"]
+		self.__user.set_property(PropertiesUser.working_event_id.value, None)
 		self.save()
 
 class Eventer:
@@ -264,6 +266,14 @@ class Eventer:
 
 		for current_event in self.__events.values():
 			if current_event.is_temp: return current_event
+
+	@property
+	def working_event(self) -> Event | None:
+		"""Событие с которым сейчас идёт работа."""
+
+		working_event_id = self.__user.get_property(PropertiesUser.working_event_id.value)
+
+		return self.__events[working_event_id]
 
 	def __get_free_id(self) -> int:
 		"""
@@ -327,9 +337,13 @@ class Eventer:
 		:rtype: Event
 		"""
 
-		new_event = Event(self, self.__get_free_id())
+		free_id = self.__get_free_id()
+
+		new_event = Event(self, free_id)
 		if new_event.id in self.__events.keys(): raise IndexError("Event with same ID already exists.")
 		self.__events[new_event.id] = new_event
+
+		self.__user.set_property(PropertiesUser.working_event_id.value, free_id)
 
 		return new_event
 

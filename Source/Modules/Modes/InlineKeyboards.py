@@ -5,13 +5,11 @@ from dublib.Engine.GetText import _
 from telebot import types
 
 def modes_bot() -> types.InlineKeyboardMarkup:
-	"""
-	Выбор режимов бота.
-	"""
+	"""Выбор режимов бота."""
 
 	menu = types.InlineKeyboardMarkup()
 
-	modes = {
+	determinations = {
 		_("✅ Классик (по умолчанию)"): "classic",
 		_("👼 Няшка"): "sweetie",
 		_("🍺 Кореш"): "buddy",
@@ -21,7 +19,7 @@ def modes_bot() -> types.InlineKeyboardMarkup:
 		_("🔙 Назад"): "delete_mode",
 	}
 
-	for string in modes.keys(): menu.add(types.InlineKeyboardButton(string, callback_data = modes[string]), row_width = 1)
+	for string in determinations.keys(): menu.add(types.InlineKeyboardButton(string, callback_data = determinations[string]), row_width = 1)
 
 	return menu
 
@@ -36,12 +34,12 @@ def answer(type_mode: BotModes) -> types.InlineKeyboardMarkup:
 
 	menu = types.InlineKeyboardMarkup()
 	
-	modes = {
+	determinations = {
 		_("Да"): f"yes_" + type_mode.value,
 		_("Нет"): "no"
 	}
 
-	for string in modes.keys(): menu.add(types.InlineKeyboardButton(string, callback_data = modes[string]), row_width = 2)
+	for string in determinations.keys(): menu.add(types.InlineKeyboardButton(string, callback_data = determinations[string]), row_width = 2)
 
 	return menu
 
@@ -55,11 +53,11 @@ def use_mode(type_mode: str) -> types.InlineKeyboardMarkup:
 
 	menu = types.InlineKeyboardMarkup()
 
-	modes = {
+	determinations = {
 		_("Применить"): f"apply_{type_mode}",
 		_("🔙 Назад"): "bot_mode"
 	}
 
-	for string in modes.keys(): menu.add(types.InlineKeyboardButton(string, callback_data = modes[string]), row_width = 1)
+	for string in determinations.keys(): menu.add(types.InlineKeyboardButton(string, callback_data = determinations[string]), row_width = 1)
 
 	return menu
