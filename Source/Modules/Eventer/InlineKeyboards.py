@@ -37,8 +37,35 @@ def counter_type() -> types.InlineKeyboardMarkup:
 
 	return menu
 
+def saving_reminder(count_elements: int) -> types.InlineKeyboardMarkup:
+	"""
+	Выбор правильно ли сохранены одноразовые напоминания для события.
+
+	:param count_elements: Количество элементов в напоминании.
+	:type count_elements: int
+	"""
+
+	button_text = "Спасибо"
+	
+	menu = types.InlineKeyboardMarkup(row_width = 1)
+
+	if count_elements == 2: 
+		menu.add(types.InlineKeyboardButton(_("Исправить"), callback_data = "change_reminder"), row_width = 1)
+		button_text = "Спасибо!"
+		
+	menu.add(types.InlineKeyboardButton(button_text, callback_data = "save_no"), row_width = 1)
+	
+	return menu
+
 def	change_reminder_after_saving_event(extended_user: ExtendedUser, event_id: int) -> types.InlineKeyboardMarkup:
-	"""Уточняющее меню выбора напоминаний для только что созданного события."""
+	"""
+	Уточняющее меню выбора напоминаний для только что созданного события.
+
+	:param extended_user: Расширенные данные пользователя.
+	:type extended_user: ExtendedUser
+	:param event_id: ID события
+	:type event_id: int
+	"""
 
 	menu = types.InlineKeyboardMarkup()
 

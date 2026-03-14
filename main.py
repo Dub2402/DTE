@@ -11,6 +11,7 @@ from dublib.TelebotUtils import TeleCache, TeleMaster, UsersManager
 from dublib.Engine.Configurator import Config
 from dublib.Engine.GetText import GetText
 from dublib.Methods.Data import Zerotify
+from dublib.Methods.System import Clear
 
 import logging
 import os
@@ -20,6 +21,8 @@ from dotenv import load_dotenv
 
 #---> Инициализация объектов.
 #==========================================================================================#
+
+Clear()
 
 settings = Config("Settings.json")
 settings.load()
@@ -137,8 +140,6 @@ def text(message: types.Message):
 			dialogs.ask_gender(user)
 
 		case "name":
-			temporary_event = extended_user.eventer.temp_event
-			if temporary_event:  extended_user.eventer.remove_event(temporary_event.id)
 			new_event = extended_user.eventer.create_event()
 			new_event.set_name(message.text)
 			dialogs.ask_date_event(user)
@@ -148,7 +149,7 @@ def text(message: types.Message):
 			new_event = extended_user.eventer.temp_event
 
 			try: new_event.set_date(message.text)
-			except ValueError: 
+			except AttributeError: 
 				dialogs.incorrect_date(user)
 				return
 			
@@ -156,7 +157,30 @@ def text(message: types.Message):
 			dialogs.ask_reminder_format(extended_user)
 		
 		case "reminder":
-			pass
+
+			#TO-DO: НАПОМИНАНИЕ ЗА 10 ДНЕЙ, А ОСТАЛОСЬ 5.
+			#TO-DO: НАПОМИНАНИЕ БОЛЬШЕ 365 ДНЕЙ.
+			#TO-DO: НАПОМИНАНИЕ С МИНУСОМ ДНЕЙ.
+			working_event = extended_user.eventer.working_event
+
+			input_reminder_data = message.text.strip().split()
+			count_elements = len(input_reminder_data)
+
+			if count_elements not in (1, 2): 
+				dialogs.send_error_input(extended_user)
+				return
+			
+			else: 
+				try:
+					reminder_data = working_event.check_input_reminder(input_reminder_data, count_elements)
+				except AttributeError:
+					dialogs.send_error_input(extended_user)
+					return
+			
+			working_event.set_reminder(reminder_data)
+
+			dialogs.save_reminder(extended_user, working_event, count_elements)
+
 	
 		case _:
 			if len(message.text) > 2:
@@ -168,7 +192,7 @@ def text(message: types.Message):
 	
 TimezonerDecorators(bot, manager, InlineKeyboards)
 
-@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("gender"))
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("gender_"))
 def gender(call: types.CallbackQuery):
 
 	user = manager.auth(call.from_user)
@@ -188,7 +212,7 @@ def gender(call: types.CallbackQuery):
 	
 	bot.answer_callback_query(call.id)
 
-@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("create_event"))
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "create_event")
 def create_event(call: types.CallbackQuery):
 
 	user = manager.auth(call.from_user)
@@ -197,7 +221,7 @@ def create_event(call: types.CallbackQuery):
 
 	bot.answer_callback_query(call.id)
 
-@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("count_down_event"))
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "count_down_event")
 def counting(call: types.CallbackQuery):
 
 	user = manager.auth(call.from_user)
@@ -227,27 +251,28 @@ def save_counter_type(call: types.CallbackQuery):
 
 	bot.answer_callback_query(call.id)
 
-@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("one_time_reminder"))
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "one_time_reminder")
 def one_time(call: types.CallbackQuery):
 
 	user = manager.auth(call.from_user)
 	extended_user = ExtendedUser(user)
 
 	dialogs.ask_time_reminder(extended_user)
-	user.set_expected_type("reminder_data")
+	user.set_expected_type("reminder")
 
 	bot.answer_callback_query(call.id)
 
-@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("another_day"))
-def InlineButtonAnotherDay(Call: types.CallbackQuery):
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "another_day")
+def InlineButtonAnotherDay(call: types.CallbackQuery):
 	"""Отправка сообщения для выбора дня и времени разовых напоминаний."""
 	
-	user = manager.auth(Call.from_user)
+	user = manager.auth(call.from_user)
 	extended_user = ExtendedUser(user)
 
 	dialogs.ask_day_and_time_reminder(extended_user)
-	user.set_expected_type("reminder_data")
+	user.set_expected_type("reminder")
 	
-	bot.answer_callback_query(Call.id)
+	bot.answer_callback_query(call.id)
 
-bot.infinity_polling()
+bot.infinity_polling()				
+

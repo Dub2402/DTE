@@ -132,6 +132,3 @@ class ExtendedUser:
 
 		Messages.append(NewMessage)
 		self.__user.set_property("trash_messages", Messages)
-
-
-

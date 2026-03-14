@@ -14,7 +14,7 @@ class ReminderTime:
 		"""
 
 		return f"{self.hour}:{self.minute}"
-	
+
 @dataclass(frozen = True)
 class ReminderData:
 	days_before_event: int

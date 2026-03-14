@@ -8,7 +8,6 @@ from Source.UI import ReplyKeyboard
 from dublib.TelebotUtils import TeleCache, UserData
 from dublib.Engine.GetText import _
 
-from datetime import date as datetime_date
 from time import sleep
 import random
 
@@ -276,7 +275,7 @@ class UserDialogs:
 		"""
 
 		working_event = extended_user.eventer.working_event
-
+	
 		day_and_time_reminder_message = self.__bot.send_message(
 			chat_id = extended_user.user.id,
 			text = _("Укажите, за сколько дней и в какое время вам напомнить о событии <b>$name</b>? 🔊\n\n<i>Пример: 10 18:30 (означает за 10 дней и в 18:30)</i>").replace("$name", working_event.name),
@@ -284,6 +283,21 @@ class UserDialogs:
 			)
 
 		extended_user.remember_trash_message(day_and_time_reminder_message.id, TrashMessagesTypes.new_event)
+
+	def send_error_input(self, extended_user: ExtendedUser):
+		"""
+		Отправляет сообщение о неверном вводе.
+
+		:param extended_user: Расширенные данные пользователя.
+		:type extended_user: ExtendedUser
+		"""
+
+		input_error_message = self.__bot.send_message(
+			chat_id = extended_user.user.id,
+			text = _("Я не совсем понял, что вы от меня хотите. Повторите попытку.")
+		)
+		
+		extended_user.remember_trash_message(input_error_message.id, TrashMessagesTypes.new_event)
 
 	def ask_format_counting(self, extended_user: ExtendedUser):
 		"""
@@ -399,8 +413,8 @@ class UserDialogs:
 
 		:param extended_user: Расширенные данные пользователя.
 		:type extended_user: ExtendedUser
-		:param event_type: Тип события.
-		:type event_type: EventTypes
+		:param event: Событие.
+		:type event: Event
 		"""	
 
 		texts = {
@@ -430,6 +444,40 @@ class UserDialogs:
 
 		extended_user.remember_trash_message(event_message.id, TrashMessagesTypes.new_event)
 	
+	def save_reminder(self, extended_user: ExtendedUser, event: Event, count_elements: int):
+		"""
+		Сохраняет событие с одноразовым напоминанием.
+
+		:param extended_user: Расширенные данные пользователя.
+		:type extended_user: ExtendedUser
+		:param event: Событие.
+		:type event: Event
+		:param count_elements: Количество элементов, описывающих напоминание.
+		:type count_elements: int
+		"""
+
+		days_before_event = event.reminder.days_before_event
+
+		reminder_data = _("в <b>$time</b> за <b>$days_before_event $days</b>!") if event.reminder.days_before_event == 0 else _("в <b>$time день в день!</b>")
+		final_text: str = _("✅ Данные сохранены!\n\nМы вам напомним о событии <b>$name</b>") + reminder_data
+
+		replaces = {
+			"$name": event.name,
+			"$time": event.reminder.time.to_string(),
+			"$days_before_event": str(days_before_event), 
+			"$days": event.formating_word_day(days_before_event)
+		}
+		for start_replace in replaces.keys(): final_text = final_text.replace(start_replace, replaces[start_replace])
+
+		event_message = self.__bot.send_message(
+			chat_id = extended_user.user.id,
+			text = final_text,
+			parse_mode = "HTML",
+			reply_markup = EventsInlineKeyboards.saving_reminder(count_elements)
+		)
+
+		extended_user.remember_trash_message(event_message.id, TrashMessagesTypes.new_event)
+
 	def notifications_options(self, user: UserData):
 
 		settings_notifications = self.__bot.send_message(user.id, _("Выберите пункт, который вы хотите настроить:"), reply_markup = InlineKeyboards.settingsmenu())

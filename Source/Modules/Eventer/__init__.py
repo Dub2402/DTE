@@ -1,5 +1,4 @@
 from .ReminderStructs import ReminderData, ReminderTime
-from Source.Core.Enums import PropertiesUser
 
 from typing import Any, TYPE_CHECKING
 from datetime import date as datetime_date
@@ -87,7 +86,31 @@ class Event:
 		reminder_time = data["time"].split(":")
 
 		return ReminderData(data["days"], ReminderTime(int(reminder_time[0]), int(reminder_time[1])))
+	
+	def check_input_reminder(self, input_reminder_data: list[str], count_elements: int) -> ReminderData:
+		"""
+		Возвращает данные напоминания.
 
+		:param input_reminder_data: Введённый текст времени и даты напоминания.
+		:type input_reminder_data: list[str]
+		:param count_elements: Количество элементов, 
+		:type count_elements: int
+		"""
+
+		if count_elements == 1: 
+			input_days_before_event = 0
+			input_time = input_reminder_data[0]
+			
+		if count_elements == 2: 
+			input_days_before_event = int(input_reminder_data[0])
+			input_time = input_reminder_data[1]
+
+		time = dateparser.parse(input_time).time()
+
+		if input_days_before_event in range(self.calculate_date_difference()): days_before_event = input_days_before_event
+
+		return ReminderData(days_before_event, ReminderTime(time.hour, time.minute))
+	
 	def __init__(self, eventer: "Eventer", id: int, data: dict[str, Any] | None = None, is_temp: bool = True):
 		"""
 		Событие.
@@ -111,7 +134,11 @@ class Event:
 			"notifications": False, 
 			"reminder": None
 		}
-		if is_temp: self.__data["is_temp"] = True
+		
+		if is_temp:
+			temp_event = self.__eventer.temp_event
+			if temp_event: self.__eventer.remove_event(temp_event.id)
+			self.__data["is_temp"] = True
 		
 		self.__date = dateparser.parse(self.__data["date"], settings = {"DATE_ORDER": "DMY", "STRICT_PARSING": True}).date() if self.__data["date"] else None
 		self.__reminder_data = self.__parse_reminder_data(self.__data["reminder"])
@@ -237,7 +264,6 @@ class Event:
 		"""Выводит событие из временного режима."""
 
 		del self.__data["is_temp"]
-		self.__user.set_property(PropertiesUser.working_event_id.value, None)
 		self.save()
 
 class Eventer:
@@ -271,7 +297,7 @@ class Eventer:
 	def working_event(self) -> Event | None:
 		"""Событие с которым сейчас идёт работа."""
 
-		working_event_id = self.__user.get_property(PropertiesUser.working_event_id.value)
+		working_event_id = self.__user.get_property("working_event_id")
 
 		return self.__events[working_event_id]
 
@@ -342,8 +368,7 @@ class Eventer:
 		new_event = Event(self, free_id)
 		if new_event.id in self.__events.keys(): raise IndexError("Event with same ID already exists.")
 		self.__events[new_event.id] = new_event
-
-		self.__user.set_property(PropertiesUser.working_event_id.value, free_id)
+		self.__user.set_property("working_event_id", free_id)
 
 		return new_event
 
