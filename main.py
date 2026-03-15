@@ -17,6 +17,7 @@ import logging
 import os
 
 from telebot import TeleBot, types
+from telebot.types import ReactionTypeEmoji
 from dotenv import load_dotenv
 
 #---> Инициализация объектов.
@@ -34,12 +35,13 @@ MediaChecker.check_media()
 bot = TeleBot(settings["token"])
 masterbot = TeleMaster(bot)
 manager = UsersManager("Data/Users")
-dialogs = UserDialogs(bot)
 adminpanel = Panel(bot, manager, settings["password"])
 
 cacher = TeleCache()
 cacher.set_bot(bot)
 cacher.set_chat_id(settings["chat_id"])
+
+dialogs = UserDialogs(bot, cacher)
 
 GetText.initialize("DTE", settings["language"], "locales")
 _ = GetText.gettext
@@ -81,7 +83,7 @@ def start(message: types.Message):
 	user.reset_expected_type()
 	user.suppress_saving(False)
 	
-	dialogs.start(user, cacher)  
+	dialogs.start(user)  
 	
 	if user.has_property("call"): dialogs.greeting(user)
 		
@@ -133,7 +135,7 @@ def text(message: types.Message):
 	match user.expected_type:
 
 		case "call":
-			extended_user.remember_trash_message(message.id, TrashMessagesTypes.greeting)
+			extended_user.remember_trash_message(message.id, TrashMessagesTypes.acquaintance)
 			user.set_property("call", message.text)
 			user.reset_expected_type()
 			dialogs.greet_by_name(extended_user)
@@ -167,30 +169,40 @@ def text(message: types.Message):
 			count_elements = len(input_reminder_data)
 
 			if count_elements not in (1, 2): 
-				dialogs.send_error_input(extended_user)
+				dialogs.error_input(extended_user)
 				return
 			
 			else: 
-				try:
-					reminder_data = working_event.check_input_reminder(input_reminder_data, count_elements)
+				try: reminder_data = working_event.check_input_reminder(input_reminder_data, count_elements)
 				except AttributeError:
-					dialogs.send_error_input(extended_user)
+					dialogs.error_input(extended_user)
 					return
 			
 			working_event.set_reminder(reminder_data)
+			if working_event.is_temp: working_event.untemp()
+			user.reset_expected_type()
 
 			dialogs.save_reminder(extended_user, working_event, count_elements)
 
-	
 		case _:
 			if len(message.text) > 2:
 				{
 					"✏️ " + _("Новое событие"): dialogs.ask_name_event, 
 					"🛎 " + _("Настройка напоминаний"): dialogs.notifications_options, 
-					"📜 " + _("Мои события"): dialogs.my_events
+					"📜 " + _("Мои события"): dialogs.my_events,
+					"👄 " + _("Поделиться с друзьями"): dialogs.share_with_friends
 				}[message.text](extended_user)
 	
 TimezonerDecorators(bot, manager, InlineKeyboards)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("delete"))
+def delete(call: types.CallbackQuery):
+
+	manager.auth(call.from_user)
+	
+	bot.delete_message(call.message.chat.id, call.message.id)
+
+	bot.answer_callback_query(call.id)
 
 @bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("gender_"))
 def gender(call: types.CallbackQuery):
@@ -257,13 +269,16 @@ def one_time(call: types.CallbackQuery):
 	user = manager.auth(call.from_user)
 	extended_user = ExtendedUser(user)
 
+	if extended_user.eventer.temp_event: extended_user.eventer.temp_event.set_counter_type(EventTypes.remained)
+	else: extended_user.eventer.working_event.switching_notifications(False)
+
 	dialogs.ask_time_reminder(extended_user)
 	user.set_expected_type("reminder")
 
 	bot.answer_callback_query(call.id)
 
 @bot.callback_query_handler(func = lambda Callback: Callback.data == "another_day")
-def InlineButtonAnotherDay(call: types.CallbackQuery):
+def another_day(call: types.CallbackQuery):
 	"""Отправка сообщения для выбора дня и времени разовых напоминаний."""
 	
 	user = manager.auth(call.from_user)
@@ -274,5 +289,72 @@ def InlineButtonAnotherDay(call: types.CallbackQuery):
 	
 	bot.answer_callback_query(call.id)
 
-bot.infinity_polling()				
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "fix_reminder_date")
+def fix_reminder_date(call: types.CallbackQuery):
+	"""Отправка сообщения при нажатии на спасибо после сохранения напоминания для события."""
 
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+
+	masterbot.safely_delete_messages(call.message.chat.id, call.message.id)
+	dialogs.ask_day_and_time_reminder(extended_user)
+	user.set_expected_type("reminder")
+
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "fix_reminder")
+def fix_reminder_date(call: types.CallbackQuery):
+	"""Отправка сообщения при нажатии на изменить при сохранении новоиспечённого события."""
+
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+
+	dialogs.ask_reminder_format_again(extended_user)
+
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "thanks")
+def thanks(call: types.CallbackQuery):
+	"""Отправка сообщения при нажатии на спасибо после сохранения напоминания для события."""
+	
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+
+	dialogs.message_with_button_emoji(extended_user)
+	
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("emoji_"))
+def put_emoji(call: types.CallbackQuery):
+	"""Отправка реакции на сообщение."""
+	
+	manager.auth(call.from_user)
+	emoji = call.data.split("_")[1]
+
+	bot.edit_message_reply_markup(call.message.chat.id, call.message.id, reply_markup = None)
+	bot.set_message_reaction(call.message.chat.id, call.message.id, [ReactionTypeEmoji(emoji)])
+	
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("without_reminders"))
+def without_reminders(call: types.CallbackQuery):
+
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+	
+	dialogs.ask_turn_off_reminders(extended_user)
+
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("confirm_"))
+def confirm(Call: types.CallbackQuery):
+	user = manager.auth(Call.from_user)
+	extended_user = ExtendedUser(user)
+
+	type_reminders = Call.data.split("_")[1]
+
+	if type_reminders == "without": dialogs.turn_off_reminders(extended_user)
+
+	bot.answer_callback_query(Call.id)
+
+bot.infinity_polling()				

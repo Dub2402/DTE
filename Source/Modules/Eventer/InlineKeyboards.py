@@ -2,6 +2,8 @@ from Source.Core.ExtendedUser import ExtendedUser
 
 from dublib.Engine.GetText import _
 
+from typing import Literal
+
 from telebot import types
 
 def add_new_event() -> types.InlineKeyboardMarkup:
@@ -9,18 +11,53 @@ def add_new_event() -> types.InlineKeyboardMarkup:
 
 	return types.InlineKeyboardMarkup([[types.InlineKeyboardButton(text = _("Создать событие"), callback_data = "create_event")]])
 
-def format_reminder() -> types.InlineKeyboardMarkup:
-	"""Выбор типа напоминаний для только что созданного события."""
+def format_reminder(type_reminders: Literal["without_reminders", "without_counting"]) -> types.InlineKeyboardMarkup:
+	"""
+	Выбор типа напоминаний.
+
+	:param type_reminders: Тип наборов кнопок.
+	:type type_reminders: Literal[&quot;without_reminders&quot;, &quot;without_counting&quot;]
+
+	1. Типы напоминаний для только что созданного события.
+	2. Типы напоминаний для только что созданного события, при нажатии на кнопку изменить.
+	"""
+
+	menu = types.InlineKeyboardMarkup()
+
+	sets_reminders = {
+		"without_reminders": {
+			_("Разовое напоминание"): "one_time_reminder",
+			_("Отсчитывать дни"): "count_down_event"
+		},
+		"without_counting": {
+			_("Без напоминаний"): "without_reminders",
+			_("Создать разовое напоминание"): "one_time_reminder",
+			_("🔙 Назад"): "delete"
+		}
+	}
+	
+	for string in sets_reminders[type_reminders].keys(): menu.add(types.InlineKeyboardButton(string, callback_data = sets_reminders[type_reminders][string]), row_width = 1)
+
+	return menu
+
+def confirm_reminder(type_reminders: Literal["without_reminders", "count_down_event"]) -> types.InlineKeyboardMarkup:
+	"""
+	Уточнение правильности выбора типа уведомлений.
+
+	:param type_reminders: Тип уведомлений, который должен быть включён.
+	:type type_reminders: Literal[&quot;without_reminders&quot;, &quot;count_down_event&quot;]
+	"""
 
 	menu = types.InlineKeyboardMarkup()
 
 	determinations = {
-		_("Разовое напоминание"): "one_time_reminder",
-		_("Отсчитывать дни"): "count_down_event"
+		_("Да"): f"confirm_{type_reminders}",
+		_("Нет"): "delete"
 	}
 
-	for string in determinations.keys(): menu.add(types.InlineKeyboardButton(string, callback_data = determinations[string]), row_width = 1)
-
+	buttons = [types.InlineKeyboardButton(string, callback_data = determinations[string]) for string in determinations.keys() ]
+	menu.add(*buttons, row_width = 2)
+	
 	return menu
 
 def counter_type() -> types.InlineKeyboardMarkup:
@@ -50,10 +87,10 @@ def saving_reminder(count_elements: int) -> types.InlineKeyboardMarkup:
 	menu = types.InlineKeyboardMarkup(row_width = 1)
 
 	if count_elements == 2: 
-		menu.add(types.InlineKeyboardButton(_("Исправить"), callback_data = "change_reminder"), row_width = 1)
+		menu.add(types.InlineKeyboardButton(_("Исправить"), callback_data = "fix_reminder_date"), row_width = 1)
 		button_text = "Спасибо!"
 		
-	menu.add(types.InlineKeyboardButton(button_text, callback_data = "save_no"), row_width = 1)
+	menu.add(types.InlineKeyboardButton(button_text, callback_data = "thanks"), row_width = 1)
 	
 	return menu
 
@@ -70,13 +107,13 @@ def	change_reminder_after_saving_event(extended_user: ExtendedUser, event_id: in
 	menu = types.InlineKeyboardMarkup()
 
 	determinations = {
-		_("Изменить 🔔"): f"settings_for_{event_id}",
+		_("Изменить 🔔"): "fix_reminder",
 		_("Режим бота 🤭"): "bot_mode",
 		_("Спасибо, все супер!"): "for_delete"
 	}
 
 	if extended_user.user.has_property("change_reminder_after_saving_mode_bot"): 
-		buttons = [ types.InlineKeyboardButton(string, callback_data = determinations[string]) for string in determinations.keys() ]
+		buttons = [types.InlineKeyboardButton(string, callback_data = determinations[string]) for string in determinations.keys() ]
 		menu.add(*buttons, row_width = 2)
 
 	else: 

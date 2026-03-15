@@ -1,11 +1,8 @@
 import enum
 
 class TrashMessagesTypes(enum.Enum):
-	greeting = "greeting"
-	gender = "gender"
-	new_event = "new_event"
-	my_events = "my_events"
-	settings_notifications = "settings_notifications"
+	acquaintance = "acquaintance"
+	events = "events"
 
 class BotModes(enum.Enum):
 	classic = "classic"

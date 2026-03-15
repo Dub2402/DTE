@@ -1,11 +1,6 @@
 from dublib.Engine.GetText import _
 
-from typing import TYPE_CHECKING
-
 from telebot import types
-
-if TYPE_CHECKING:
-	from Source.Core.Enums import TrashMessagesTypes
 
 def settingsmenu() -> types.InlineKeyboardMarkup:
 	"""Меню настройки уведомлений."""
@@ -22,7 +17,7 @@ def settingsmenu() -> types.InlineKeyboardMarkup:
 		_("🔙 Назад"): "steak_messageSettings__",
 	}
 
-	for string in determinations.keys(): menu.add(types.InlineKeyboardButton(string, callback_data = determinations[string]), row_width = 1)
+	for string in determinations.keys(): menu.add(types.InlineKeyboardButton(string, callback_data = determinations[string]))
 	return menu
 
 def delete(text: str) -> types.InlineKeyboardMarkup:
@@ -46,21 +41,30 @@ def choice_gender() -> types.InlineKeyboardMarkup:
 		_("Мужчина 👨"): "gender_1",
 		_("Женщина 👩"): "gender_0"
 	}
-	for string in determinations.keys(): menu.add(types.InlineKeyboardButton(string, callback_data = determinations[string]), row_width = 1)
+	for string in determinations.keys(): menu.add(types.InlineKeyboardButton(string, callback_data = determinations[string]))
 
 	return menu
 	
-def emoji(emoji: str, type_trash: TrashMessagesTypes | None = None) -> types.InlineKeyboardMarkup:
+def emoji(emoji: str) -> types.InlineKeyboardMarkup:
 	"""
 	Кнопка-эмодзи.
 
-	:param emoji: Эмодзи
+	:param emoji: Эмодзи.
 	:type emoji: str
-	:param type_trash: Тип сообщений, которые нужно удалить.
-	:type type_trash: TrashMessagesTypes | None
 	"""
 
 	menu = types.InlineKeyboardMarkup()
-	menu.add(types.InlineKeyboardButton(emoji, callback_data = f"emoji_{emoji}_{type_trash.value}"), row_width = 1)
+	menu.add(types.InlineKeyboardButton(emoji, callback_data = f"emoji_{emoji}"))
+
+	return menu
+
+def add_share() -> types.InlineKeyboardMarkup:
+	"""Меню поделиться или выйти назад."""
+
+	menu = types.InlineKeyboardMarkup()
+
+	menu.add(types.InlineKeyboardButton(_("Поделиться"), switch_inline_query = "\n\n" +  _("Просто **Т-т-топовый** бот для отсчёта дней до событий 🥳")))
+
+	menu.add(types.InlineKeyboardButton(_("🔙 Назад"), callback_data = "delete"))
 
 	return menu
