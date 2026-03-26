@@ -332,13 +332,15 @@ class UserDialogs:
 		
 		extended_user.remember_trash_message(format_counting_message.id, TrashMessagesTypes.events)
 
-	def my_events(self, extended_user: ExtendedUser):
+	def my_events(self, extended_user: ExtendedUser, remove_events: bool = False):
 		"""
 		Отправляет приветственное сообщение и сообщения со всеми событиями.
 
 		:param extended_user: Расширенные данные пользователя.
 		:type extended_user: ExtendedUser
 		"""
+
+		if remove_events: extended_user.delete_trash_messages(self.__bot, TrashMessagesTypes.events.value)
 
 		eventer = extended_user.eventer
 

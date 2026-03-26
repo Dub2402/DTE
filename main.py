@@ -357,4 +357,14 @@ def confirm(Call: types.CallbackQuery):
 
 	bot.answer_callback_query(Call.id)
 
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("remove_event_"))
+def InlineButtonRemoveEvent(Call: types.CallbackQuery):
+	user = manager.auth(Call.from_user)
+	extended_user = ExtendedUser(user)
+
+	extended_user.eventer.remove_event(int(Call.data.split("_")[-1]))
+	dialogs.my_events(extended_user, True)
+
+	bot.answer_callback_query(Call.id)
+
 bot.infinity_polling()				

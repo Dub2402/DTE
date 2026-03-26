@@ -393,8 +393,9 @@ class Eventer:
 		"""
 
 		del self.__events[id]
+		self.__user.set_property("working_event_id", None)
 		self.save()
-
+		
 	def save(self):
 
 		"""Сохраняет события в данные пользователя."""
