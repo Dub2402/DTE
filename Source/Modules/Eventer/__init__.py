@@ -14,7 +14,10 @@ class EventTypes(enum.Enum):
 	passed = "passed"
 	remained = "remained"
 	today = "today"
-
+	counting = "counting"
+	half_reminder = "half_reminder"
+	full_reminder = "full_reminder"
+	
 class Event:
 	"""Событие."""
 
@@ -240,7 +243,7 @@ class Event:
 		"""
 		Переключает уведомления.
 
-		:param switch: Переклюатель.
+		:param switch: Переключатель.
 		:type switch: bool
 		"""
 
@@ -265,7 +268,7 @@ class Event:
 
 		del self.__data["is_temp"]
 		self.save()
-
+ 
 class Eventer:
 	"""Обработчик событий."""
 
@@ -280,6 +283,12 @@ class Eventer:
 
 		return tuple(self.__events.values())
 	
+	@property
+	def events_with_reminders(self) -> tuple[Event]:
+		"""Набор событий, у которых не отключены напоминания."""
+
+		return self.__get_events_with_reminders()
+
 	@property
 	def events_id(self) -> tuple[int]:
 		"""Набор ID событий."""
@@ -312,6 +321,28 @@ class Eventer:
 		events_ids = self.__events.keys()
 
 		return max(events_ids) + 1 if events_ids else 1
+
+	def __get_events_with_reminders(self) -> tuple[Event]:
+		"""
+		Получаем набор событий у которых не отключены напоминания.
+
+		:return: Набор событий у которых не отключены напоминания
+		:rtype: tuple[Event]
+		"""
+
+		self.__events_with_reminders = dict()
+
+		for event in self.__events.values():
+
+			if event.notifications:
+				self.__events_with_reminders[event.id] = event
+				continue
+
+			if event.reminder != None: 
+				self.__events_with_reminders[event.id] = event
+				continue
+		
+		return tuple(self.__events_with_reminders.values())
 
 	def __parse_events(self) -> dict[int, Event]:
 		"""
@@ -397,7 +428,6 @@ class Eventer:
 		self.save()
 		
 	def save(self):
-
 		"""Сохраняет события в данные пользователя."""
 
 		buffer: dict[str, dict] = dict()

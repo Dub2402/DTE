@@ -345,12 +345,7 @@ class UserDialogs:
 		eventer = extended_user.eventer
 
 		if not eventer.events:
-			self.__bot.send_message(
-				chat_id = extended_user.user.id, 
-				text = _("Вы не создали ни одного события 🙄\nНужно это дело исправить!)"),
-				parse_mode = "HTML", 
-				reply_markup = EventsInlineKeyboards.add_new_event()
-			)
+			self.no_events(extended_user, TrashMessagesTypes.events)
 			return
 
 		number_event = 1
@@ -367,9 +362,9 @@ class UserDialogs:
 
 			difference = event.calculate_date_difference()
 			
-			if difference == 0: self.my_event(extended_user, EventTypes.today, number_event, event.id, difference)
+			if difference == 0: self.my_event(extended_user, EventTypes.today, number_event, event, difference)
 
-			else: self.my_event(extended_user, event.counter_type, number_event, event.id, difference)
+			else: self.my_event(extended_user, event.counter_type, number_event, event, difference)
 				
 			number_event += 1 		
 			sleep(0.1)
@@ -381,7 +376,7 @@ class UserDialogs:
 		)
 		extended_user.remember_trash_message(end_message.id, TrashMessagesTypes.events)
 
-	def my_event(self, extended_user: ExtendedUser, event_type: EventTypes, number_event: int, event_id: int, difference: int):
+	def my_event(self, extended_user: ExtendedUser, event_type: EventTypes, number_event: int, current_event: Event, difference: int):
 		"""
 		Отправка сообщений события.
 
@@ -391,36 +386,34 @@ class UserDialogs:
 		:type event_type: EventTypes
 		:param number_event: Порядковый номер события.
 		:type number_event: int
-		:param event_id: ID события.
-		:type event_id: int
+		:param current_event: Текущее событие.
+		:type current_event: Event
 		:param difference: Количество дней между событиями.
 		:type difference: int
 		"""
-
-		event = extended_user.eventer[event_id]
 		
-		texts = {
+		preparation_texts = {
 			EventTypes.today: "$number_event) " + _("Ваше событие <b>$name</b> сегодня."),
 			EventTypes.remained: "$number_event) " + _("<b>$name</b> наступит через $remains $days!"),
 			EventTypes.passed: "$number_event) " + _("Событие <b>$name</b> было $remains $days назад!")
 		}
 
 		replaces = {
-			"$name": event.name,
+			"$name": current_event.name,
 			"$remains": str(difference),
-			"$days": event.formating_word_day(difference),
+			"$days": current_event.formating_word_day(difference),
 			"$number_event": str(number_event)
 		}
 
-		final_text: str = texts[event_type]
+		preparation_text: str = preparation_texts[event_type]
 
-		for start_replace in replaces.keys(): final_text = final_text.replace(start_replace, replaces[start_replace])
+		for start_replace in replaces.keys(): final_text = preparation_text.replace(start_replace, replaces[start_replace])
 		
 		event_message = self.__bot.send_message(
 			chat_id = extended_user.user.id,
 			text = final_text,
 			parse_mode = "HTML",
-			reply_markup = EventsInlineKeyboards.remove_event(event_id)
+			reply_markup = EventsInlineKeyboards.remove_event(current_event.id)
 		)
 			
 		extended_user.remember_trash_message(event_message.id, TrashMessagesTypes.events)
@@ -560,6 +553,107 @@ class UserDialogs:
 
 		settings_notifications = self.__bot.send_message(extended_user.user.id, _("Выберите пункт, который вы хотите настроить:"), reply_markup = InlineKeyboards.settingsmenu())
 		extended_user.remember_trash_message(settings_notifications.id, TrashMessagesTypes.events)
+
+	def no_events(self, extended_user: ExtendedUser, type_message: TrashMessagesTypes):
+		"""
+		Отправляет сообщение о том, что нет событий в которых можно отключить напоминания.
+
+		:param extended_user: _description_
+		:type extended_user: ExtendedUser
+		"""
+
+		text = _("Вы не создали ни одного события 🙄\nНужно это дело исправить!)") if type_message == TrashMessagesTypes.events else _("Чтобы отключить напоминания, сначала создайте событие!")
+
+		no_events = self.__bot.send_message(
+				chat_id = extended_user.user.id, 
+				text = text,
+				parse_mode = "HTML", 
+				reply_markup = EventsInlineKeyboards.add_new_event()
+			)
+
+		extended_user.remember_trash_message(no_events.id, type_message)
+
+	def not_events_with_reminders(self, extended_user: ExtendedUser):
+		"""
+		Отправляет сообщение о том, что нет событий в которых можно отключить напоминания.
+
+		:param extended_user: _description_
+		:type extended_user: ExtendedUser
+		"""
+
+		not_events_with_reminders = self.__bot.send_message(
+			extended_user.user.id,
+			_("У вас все напоминания уже отключены!")
+		)
+		
+		extended_user.remember_trash_message(not_events_with_reminders.id, TrashMessagesTypes.reminders)
+
+	def your_reminders(self, extended_user: ExtendedUser):
+		"""
+		Отправляет сообщение о том, что нет событий в которых можно отключить напоминания.
+
+		:param extended_user: _description_
+		:type extended_user: ExtendedUser
+		"""
+
+		your_reminders = self.__bot.send_message(
+			extended_user.user.id,
+			_("ВАШИ НАПОМИНАНИЯ:")
+		)
+		extended_user.remember_trash_message(your_reminders.id, TrashMessagesTypes.reminders)
+
+		number_event = 1
+
+		for event in extended_user.eventer.events_with_reminders:
+
+			if event.notifications: self.your_reminder(extended_user, EventTypes.counting, number_event, event)
+			elif event.reminder.days_before_event == 0: self.your_reminder(extended_user, EventTypes.half_reminder, number_event, event)
+			elif event.reminder.days_before_event != 0: self.your_reminder(extended_user, EventTypes.full_reminder, number_event, event)
+
+			number_event += 1 		
+			sleep(0.1)
+
+		#TO-DO: Удаление всех сообщений reminder MessageNotificationsDeactivate.
+		exit_disable_notifications = self.__bot.send_message(
+			extended_user.user.id,
+			_("<b>Для выхода</b> в предыдущее меню нажмите \"Назад\":"),
+			reply_markup = InlineKeyboards.delete(_("🔙 Назад")),
+			parse_mode = "HTML"
+		)
+		
+		extended_user.remember_trash_message(exit_disable_notifications.id, TrashMessagesTypes.reminders)
+
+	def your_reminder(self, extended_user: ExtendedUser, event_type: EventTypes, number_event: int,  current_event: Event):
+		print(event_type)
+
+		preparation_texts = {
+			EventTypes.counting: "$number_event) " + _("<b>$name</b>\nУстановлены ежедневные напоминания!"),
+			EventTypes.half_reminder: "$number_event) " + _("<b>$name</b>\nНапоминание установлено на $time день в день!"),
+			EventTypes.full_reminder: "$number_event) " + _("<b>$name</b>\nНапоминание установлено на $time за $days_before_event!")
+		}
+
+		replaces = {
+		"$name": current_event.name,
+		"$number_event": str(number_event)
+		}
+
+		if event_type in (EventTypes.half_reminder, EventTypes.full_reminder): replaces["$time"] = current_event.reminder.time.to_string() 
+		
+		if event_type == EventTypes.full_reminder: 
+			days_before_event = current_event.reminder.days_before_event
+			replaces["$days_before_event"]  = str(days_before_event) + " " + current_event.formating_word_day(days_before_event)
+
+		preparation_text: str = preparation_texts[event_type]
+
+		for start_replace in replaces.keys(): preparation_text = preparation_text.replace(start_replace, replaces[start_replace])
+
+		reminder_message = self.__bot.send_message(
+			extended_user.user.id,
+			text = preparation_text,
+			reply_markup = EventsInlineKeyboards.disable_reminder(current_event.id),
+			parse_mode = "HTML"
+		)
+		extended_user.remember_trash_message(reminder_message.id, TrashMessagesTypes.reminders)
 
 	def share_with_friends(self, extended_user: ExtendedUser):
 		"""

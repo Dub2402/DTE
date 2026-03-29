@@ -130,10 +130,20 @@ def choice_another_day() -> types.InlineKeyboardMarkup:
 
 def remove_event(event_id: int) -> types.InlineKeyboardMarkup:
 	"""
-	Кнопка удаление события.
+	Кнопка удаления события.
 
 	:param event_id: id удаляемого события.
 	:type event_id: int
 	"""
 
 	return types.InlineKeyboardMarkup([[types.InlineKeyboardButton(text = _("Удалить"), callback_data = f"remove_event_{event_id}")]])
+
+def disable_reminder(event_id: int) -> types.InlineKeyboardMarkup:
+	"""
+	Кнопка отключения напоминания.
+
+	:param event_id: id удаляемого напоминания.
+	:type event_id: int
+	"""
+
+	return types.InlineKeyboardMarkup([[types.InlineKeyboardButton(text = _("🔕 Отключить"), callback_data = f"disable_reminder_{event_id}")]])

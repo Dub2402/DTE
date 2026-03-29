@@ -3,6 +3,7 @@ import enum
 class TrashMessagesTypes(enum.Enum):
 	acquaintance = "acquaintance"
 	events = "events"
+	reminders = "reminders"
 
 class BotModes(enum.Enum):
 	classic = "classic"

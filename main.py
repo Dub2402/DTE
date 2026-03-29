@@ -195,7 +195,7 @@ def text(message: types.Message):
 	
 TimezonerDecorators(bot, manager, InlineKeyboards)
 
-@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("delete"))
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "delete")
 def delete(call: types.CallbackQuery):
 
 	manager.auth(call.from_user)
@@ -358,12 +358,49 @@ def confirm(Call: types.CallbackQuery):
 	bot.answer_callback_query(Call.id)
 
 @bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("remove_event_"))
-def InlineButtonRemoveEvent(Call: types.CallbackQuery):
+def remove_event(Call: types.CallbackQuery):
 	user = manager.auth(Call.from_user)
 	extended_user = ExtendedUser(user)
 
 	extended_user.eventer.remove_event(int(Call.data.split("_")[-1]))
 	dialogs.my_events(extended_user, True)
+
+	bot.answer_callback_query(Call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "disable_reminders")
+def disable_reminders(Call: types.CallbackQuery):
+	user = manager.auth(Call.from_user)
+	extended_user = ExtendedUser(user)
+
+	if not extended_user.eventer.events: 
+		dialogs.no_events(extended_user, TrashMessagesTypes.reminders)
+		return
+
+	if extended_user.eventer.events_with_reminders: 
+		dialogs.your_reminders(extended_user)
+
+	else: dialogs.not_events_with_reminders(extended_user)
+
+	bot.answer_callback_query(Call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("disable_reminder_"))
+def disable_reminder(Call: types.CallbackQuery):
+	user = manager.auth(Call.from_user)
+	extended_user = ExtendedUser(user)
+	eventer = extended_user.eventer
+	working_event = eventer.working_event
+
+	user.set_property("working_event_id", int(Call.data.split("_")[-1]))
+
+	working_event.switching_notifications(False)
+	working_event.set_reminder(None)
+	
+	bot.delete_message(Call.message.chat.id, Call.message.id)
+
+	if not eventer.events_with_reminders:
+		extended_user.delete_trash_messages(bot, TrashMessagesTypes.reminders)
+
+	disable_reminders(Call = Call)
 
 	bot.answer_callback_query(Call.id)
 
