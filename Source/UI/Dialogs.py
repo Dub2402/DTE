@@ -558,18 +558,24 @@ class UserDialogs:
 		"""
 		Отправляет сообщение о том, что нет событий в которых можно отключить напоминания.
 
-		:param extended_user: _description_
+		:param extended_user: Расширенные данные пользователя.
 		:type extended_user: ExtendedUser
+		:param type_message: Тип сообщения, который нужно сохранить.
+		:type type_message: TrashMessagesTypes
 		"""
 
-		text = _("Вы не создали ни одного события 🙄\nНужно это дело исправить!)") if type_message == TrashMessagesTypes.events else _("Чтобы отключить напоминания, сначала создайте событие!")
+		texts  = {
+			TrashMessagesTypes.events: _("Вы не создали ни одного события 🙄\nНужно это дело исправить!)"),
+			TrashMessagesTypes.disable_reminders: _("Чтобы отключить напоминания, сначала создайте событие!"),
+			TrashMessagesTypes.change_reminders: _("Чтобы изменить напоминание, сначала создайте событие!"),
+		}
 
 		no_events = self.__bot.send_message(
-				chat_id = extended_user.user.id, 
-				text = text,
-				parse_mode = "HTML", 
-				reply_markup = EventsInlineKeyboards.add_new_event()
-			)
+			chat_id = extended_user.user.id, 
+			text = texts[type_message.value],
+			parse_mode = "HTML", 
+			reply_markup = EventsInlineKeyboards.add_new_event()
+		)
 
 		extended_user.remember_trash_message(no_events.id, type_message)
 
@@ -577,7 +583,7 @@ class UserDialogs:
 		"""
 		Отправляет сообщение о том, что нет событий в которых можно отключить напоминания.
 
-		:param extended_user: _description_
+		:param extended_user: Расширенные данные пользователя.
 		:type extended_user: ExtendedUser
 		"""
 
@@ -586,13 +592,13 @@ class UserDialogs:
 			_("У вас все напоминания уже отключены!")
 		)
 		
-		extended_user.remember_trash_message(not_events_with_reminders.id, TrashMessagesTypes.reminders)
+		extended_user.remember_trash_message(not_events_with_reminders.id, TrashMessagesTypes.disable_reminders)
 
 	def your_reminders(self, extended_user: ExtendedUser):
 		"""
 		Отправляет сообщение о том, что нет событий в которых можно отключить напоминания.
 
-		:param extended_user: _description_
+		:param extended_user: Расширенные данные пользователя.
 		:type extended_user: ExtendedUser
 		"""
 
@@ -606,35 +612,43 @@ class UserDialogs:
 
 		for event in extended_user.eventer.events_with_reminders:
 
-			if event.notifications: self.your_reminder(extended_user, EventTypes.counting, number_event, event)
-			elif event.reminder.days_before_event == 0: self.your_reminder(extended_user, EventTypes.half_reminder, number_event, event)
-			elif event.reminder.days_before_event != 0: self.your_reminder(extended_user, EventTypes.full_reminder, number_event, event)
+			if event.notifications: event_type = EventTypes.counting
+			elif event.reminder.days_before_event == 0: event_type = EventTypes.half_reminder
+			else: event_type = EventTypes.full_reminder
 
 			number_event += 1 		
 			sleep(0.1)
+			
+			self.your_reminder(extended_user, event_type, number_event, event, TrashMessagesTypes.disable_reminders)
 
-		#TO-DO: Удаление всех сообщений reminder MessageNotificationsDeactivate.
-		exit_disable_notifications = self.__bot.send_message(
-			extended_user.user.id,
-			_("<b>Для выхода</b> в предыдущее меню нажмите \"Назад\":"),
-			reply_markup = InlineKeyboards.delete(_("🔙 Назад")),
-			parse_mode = "HTML"
-		)
-		
-		extended_user.remember_trash_message(exit_disable_notifications.id, TrashMessagesTypes.reminders)
+		self.exit_with_delete(extended_user, TrashMessagesTypes.disable_reminders)
 
-	def your_reminder(self, extended_user: ExtendedUser, event_type: EventTypes, number_event: int,  current_event: Event):
-		print(event_type)
+	def your_reminder(self, extended_user: ExtendedUser, event_type: EventTypes, number_event: int,  current_event: Event, type_reply_markup: TrashMessagesTypes):
+		"""
+		Отправляет сообщение в виде события с типом напоминания.
+
+		:param extended_user: Расширенные данные пользователя.
+		:type extended_user: ExtendedUser
+		:param event_type: Тип отправляемого события.
+		:type event_type: EventTypes
+		:param number_event: Порядковый номер события.
+		:type number_event: int
+		:param current_event: Текущее событие.
+		:type current_event: Event
+		:param type_reply_markup: Тип отправляемой клавиатуры.
+		:type type_reply_markup: TrashMessagesTypes
+		"""
 
 		preparation_texts = {
 			EventTypes.counting: "$number_event) " + _("<b>$name</b>\nУстановлены ежедневные напоминания!"),
 			EventTypes.half_reminder: "$number_event) " + _("<b>$name</b>\nНапоминание установлено на $time день в день!"),
-			EventTypes.full_reminder: "$number_event) " + _("<b>$name</b>\nНапоминание установлено на $time за $days_before_event!")
+			EventTypes.full_reminder: "$number_event) " + _("<b>$name</b>\nНапоминание установлено на $time за $days_before_event!"),
+			EventTypes.no_nofifications: "$number_event) " + _("<b>$name</b>\nНапоминание отключено!"),
 		}
 
 		replaces = {
-		"$name": current_event.name,
-		"$number_event": str(number_event)
+			"$name": current_event.name,
+			"$number_event": str(number_event)
 		}
 
 		if event_type in (EventTypes.half_reminder, EventTypes.full_reminder): replaces["$time"] = current_event.reminder.time.to_string() 
@@ -647,13 +661,67 @@ class UserDialogs:
 
 		for start_replace in replaces.keys(): preparation_text = preparation_text.replace(start_replace, replaces[start_replace])
 
+		reply_markup = {
+			"disable_reminder": EventsInlineKeyboards.disable_reminder(current_event.id),
+			"change_reminder": EventsInlineKeyboards.C(current_event.id)
+		}
+
 		reminder_message = self.__bot.send_message(
 			extended_user.user.id,
 			text = preparation_text,
-			reply_markup = EventsInlineKeyboards.disable_reminder(current_event.id),
+			reply_markup = reply_markup[type_reply_markup.value],
 			parse_mode = "HTML"
 		)
 		extended_user.remember_trash_message(reminder_message.id, TrashMessagesTypes.reminders)
+
+	def your_events(self, extended_user: ExtendedUser):
+		"""
+		Отправляет сообщение со всеми событиями и оповещает о типе напоминаний для каждого сообщения.
+
+		:param extended_user: Расширенные данные пользователя.
+		:type extended_user: ExtendedUser
+		"""
+
+		your_events = self.__bot.send_message(
+			extended_user.user.id, 
+			_("ВАШИ СОБЫТИЯ:")
+		)
+		extended_user.remember_trash_message(your_events.id, TrashMessagesTypes.change_reminders)
+
+		number_event = 1
+
+		for event in extended_user.eventer.events:
+			
+			if event.notifications: event_type = EventTypes.counting
+
+			elif event.reminder.days_before_event == 0: event_type = EventTypes.half_reminder
+			elif event.reminder.days_before_event != 0: event_type = EventTypes.full_reminder
+			else: event_type = EventTypes.no_nofifications
+
+			self.your_reminder(extended_user, event_type, number_event, event, TrashMessagesTypes.change_reminders)
+				# reply_markup = InlineKeyboard.ChoiceEventToChangeReminder(event.id),
+			
+			number_event += 1 		
+			sleep(0.1)
+
+	def exit_with_delete(self, extended_user: ExtendedUser, type_message: TrashMessagesTypes):
+		"""
+		Отправка кнопки назад, при нажатии на которую удаляется сообщения определённого типа.
+
+		:param extended_user: Расширенные данные пользователя.
+		:type extended_user: ExtendedUser
+		:param type_message: Тип сообщения, который нужно сохранить.
+		:type type_message: TrashMessagesTypes
+		"""
+
+		exit_message = self.__bot.send_message(
+			extended_user.user.id,
+			_("<b>Для выхода</b> в предыдущее меню нажмите \"Назад\":"),
+			reply_markup = InlineKeyboards.delete(_("🔙 Назад")),
+			parse_mode = "HTML"
+		)
+		
+		extended_user.remember_trash_message(exit_message.id, type_message)
 
 	def share_with_friends(self, extended_user: ExtendedUser):
 		"""

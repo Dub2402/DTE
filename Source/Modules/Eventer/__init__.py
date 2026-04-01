@@ -17,6 +17,7 @@ class EventTypes(enum.Enum):
 	counting = "counting"
 	half_reminder = "half_reminder"
 	full_reminder = "full_reminder"
+	no_nofifications = "no_nofifications"
 	
 class Event:
 	"""Событие."""

@@ -142,8 +142,18 @@ def disable_reminder(event_id: int) -> types.InlineKeyboardMarkup:
 	"""
 	Кнопка отключения напоминания.
 
-	:param event_id: id удаляемого напоминания.
+	:param event_id: id отключаемого напоминания.
 	:type event_id: int
 	"""
 
 	return types.InlineKeyboardMarkup([[types.InlineKeyboardButton(text = _("🔕 Отключить"), callback_data = f"disable_reminder_{event_id}")]])
+
+def change_reminder(event_id: int) -> types.InlineKeyboardMarkup:
+	"""
+	Кнопка изменения напоминания.
+
+	:param event_id: id изменяемого напоминания.
+	:type event_id: int
+	"""
+
+	return types.InlineKeyboardMarkup([[types.InlineKeyboardButton(text = _("🔔 Изменить напоминание"), callback_data = f"change_reminders_{event_id}")]])

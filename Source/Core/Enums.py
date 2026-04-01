@@ -3,7 +3,8 @@ import enum
 class TrashMessagesTypes(enum.Enum):
 	acquaintance = "acquaintance"
 	events = "events"
-	reminders = "reminders"
+	disable_reminders = "disable_reminders"
+	change_reminders = "change_reminders"
 
 class BotModes(enum.Enum):
 	classic = "classic"

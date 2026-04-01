@@ -397,11 +397,23 @@ def disable_reminder(Call: types.CallbackQuery):
 	
 	bot.delete_message(Call.message.chat.id, Call.message.id)
 
-	if not eventer.events_with_reminders:
-		extended_user.delete_trash_messages(bot, TrashMessagesTypes.reminders)
+	extended_user.delete_trash_messages(bot, TrashMessagesTypes.reminders.value)
 
 	disable_reminders(Call = Call)
 
+	bot.answer_callback_query(Call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "change_reminders")
+def change_reminders(Call: types.CallbackQuery):
+	user = manager.auth(Call.from_user)
+	extended_user = ExtendedUser(user)
+	eventer = extended_user.eventer
+
+	if eventer.events: dialogs.your_events(extended_user)
+	else: dialogs.no_events(extended_user, TrashMessagesTypes.change_reminders)
+
+	dialogs.exit_with_delete(extended_user, TrashMessagesTypes.change_reminders)
+		
 	bot.answer_callback_query(Call.id)
 
 bot.infinity_polling()				
