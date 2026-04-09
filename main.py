@@ -1,6 +1,7 @@
 from Source.Modules.Timezoner import TimezonerInlineKeyboards, TimezonerDecorators
+from Source.Core.Enums import TrashMessagesTypes, StatusWorking
+from Source.Modules.Modes.Decorators import Decorators as ModesDecorators
 from Source.Core.ExtendedUser import ExtendedUser
-from Source.Core.Enums import TrashMessagesTypes
 from Source.Modules.Eventer import EventTypes
 from Source.TeleBotAdminPanel import Panel
 from Source.UI.Dialogs import UserDialogs
@@ -132,6 +133,17 @@ def text(message: types.Message):
 
 	if adminpanel.procedures.text(message): return
 
+	buttons = {
+    "✏️ " + _("Новое событие"): dialogs.ask_name_event,
+    "🛎 " + _("Настройка напоминаний"): dialogs.notifications_options,
+    "📜 " + _("Мои события"): dialogs.my_events,
+    "👄 " + _("Поделиться с друзьями"): dialogs.share_with_friends
+	}
+
+	if message.text in buttons:
+		buttons[message.text](extended_user)
+		return
+
 	match user.expected_type:
 
 		case "call":
@@ -183,17 +195,20 @@ def text(message: types.Message):
 			user.reset_expected_type()
 
 			dialogs.save_reminder(extended_user, working_event, count_elements)
-
-		case _:
-			if len(message.text) > 2:
-				{
-					"✏️ " + _("Новое событие"): dialogs.ask_name_event, 
-					"🛎 " + _("Настройка напоминаний"): dialogs.notifications_options, 
-					"📜 " + _("Мои события"): dialogs.my_events,
-					"👄 " + _("Поделиться с друзьями"): dialogs.share_with_friends
-				}[message.text](extended_user)
 	
 TimezonerDecorators(bot, manager, InlineKeyboards)
+ModesDecorators(bot, manager).inline_keyboards()
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "clearning")
+def clearning(call: types.CallbackQuery):
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+
+	extended_user.delete_trash_messages(bot)
+
+	if StatusWorking.change.value == extended_user.status_working: change_reminders(call)
+
+	bot.answer_callback_query(call.id)
 
 @bot.callback_query_handler(func = lambda Callback: Callback.data == "delete")
 def delete(call: types.CallbackQuery):
@@ -228,8 +243,9 @@ def gender(call: types.CallbackQuery):
 def create_event(call: types.CallbackQuery):
 
 	user = manager.auth(call.from_user)
-	extendeed_user = ExtendedUser(user) 
-	dialogs.ask_name_event(extendeed_user, " 😉 \n\n<i>Например: День рождения</i>", button = None)
+	extended_user = ExtendedUser(user) 
+
+	dialogs.ask_name_event(extended_user, " 😉 \n\n<i>Например: День рождения</i>", button = None)
 
 	bot.answer_callback_query(call.id)
 
@@ -308,6 +324,7 @@ def fix_reminder_date(call: types.CallbackQuery):
 
 	user = manager.auth(call.from_user)
 	extended_user = ExtendedUser(user)
+	extended_user.switching_status_working(StatusWorking.hot_fix)
 
 	dialogs.ask_reminder_format_again(extended_user)
 
@@ -320,7 +337,10 @@ def thanks(call: types.CallbackQuery):
 	user = manager.auth(call.from_user)
 	extended_user = ExtendedUser(user)
 
-	dialogs.message_with_button_emoji(extended_user)
+	if extended_user.status_working == StatusWorking.change.value: 
+		extended_user.delete_trash_messages(bot, TrashMessagesTypes.change_reminders.value)
+		change_reminders(call)
+	else: dialogs.message_with_button_emoji(extended_user)
 	
 	bot.answer_callback_query(call.id)
 
@@ -338,42 +358,62 @@ def put_emoji(call: types.CallbackQuery):
 
 @bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("without_reminders"))
 def without_reminders(call: types.CallbackQuery):
-
+	"""Подтверждение отключения всех напоминаний для события."""
 	user = manager.auth(call.from_user)
 	extended_user = ExtendedUser(user)
 	
-	dialogs.ask_turn_off_reminders(extended_user)
+	dialogs.ask_change_reminders(extended_user, EventTypes.no_nofifications)
+
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("every_day_reminder"))
+def every_day_reminder(call: types.CallbackQuery):
+	"""Подтверждение включения ежедневных напоминаний."""
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+	
+	dialogs.ask_change_reminders(extended_user, EventTypes.counting)
 
 	bot.answer_callback_query(call.id)
 
 @bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("confirm_"))
-def confirm(Call: types.CallbackQuery):
-	user = manager.auth(Call.from_user)
+def confirm(call: types.CallbackQuery):
+	user = manager.auth(call.from_user)
 	extended_user = ExtendedUser(user)
 
-	type_reminders = Call.data.split("_")[1]
+	type_reminders = call.data.split("_")[1] + "_" + call.data.split("_")[2]
+	working_event = extended_user.eventer.working_event
 
-	if type_reminders == "without": dialogs.turn_off_reminders(extended_user)
+	if type_reminders == EventTypes.no_nofifications.value: 
+		dialogs.turn_off_reminders(extended_user)
+		working_event.switching_notifications(False)
+		working_event.set_reminder(None)
 
-	bot.answer_callback_query(Call.id)
+	if type_reminders == EventTypes.counting.value: 
+
+		dialogs.turn_on_every_day_reminders(extended_user)
+		working_event.switching_notifications(True)
+		working_event.set_reminder(None)
+
+	bot.answer_callback_query(call.id)
 
 @bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("remove_event_"))
-def remove_event(Call: types.CallbackQuery):
-	user = manager.auth(Call.from_user)
+def remove_event(call: types.CallbackQuery):
+	user = manager.auth(call.from_user)
 	extended_user = ExtendedUser(user)
 
-	extended_user.eventer.remove_event(int(Call.data.split("_")[-1]))
+	extended_user.eventer.remove_event(int(call.data.split("_")[-1]))
 	dialogs.my_events(extended_user, True)
 
-	bot.answer_callback_query(Call.id)
+	bot.answer_callback_query(call.id)
 
 @bot.callback_query_handler(func = lambda Callback: Callback.data == "disable_reminders")
-def disable_reminders(Call: types.CallbackQuery):
-	user = manager.auth(Call.from_user)
+def disable_reminders(call: types.CallbackQuery):
+	user = manager.auth(call.from_user)
 	extended_user = ExtendedUser(user)
 
 	if not extended_user.eventer.events: 
-		dialogs.no_events(extended_user, TrashMessagesTypes.reminders)
+		dialogs.no_events(extended_user, TrashMessagesTypes.disable_reminders)
 		return
 
 	if extended_user.eventer.events_with_reminders: 
@@ -381,31 +421,30 @@ def disable_reminders(Call: types.CallbackQuery):
 
 	else: dialogs.not_events_with_reminders(extended_user)
 
-	bot.answer_callback_query(Call.id)
+	bot.answer_callback_query(call.id)
 
 @bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("disable_reminder_"))
-def disable_reminder(Call: types.CallbackQuery):
-	user = manager.auth(Call.from_user)
+def disable_reminder(call: types.CallbackQuery):
+	user = manager.auth(call.from_user)
 	extended_user = ExtendedUser(user)
-	eventer = extended_user.eventer
-	working_event = eventer.working_event
+	extended_user.switching_working_event_id(int(call.data.split("_")[-1]))
 
-	user.set_property("working_event_id", int(Call.data.split("_")[-1]))
-
+	working_event = extended_user.eventer.working_event
 	working_event.switching_notifications(False)
 	working_event.set_reminder(None)
 	
-	bot.delete_message(Call.message.chat.id, Call.message.id)
+	bot.delete_message(call.message.chat.id, call.message.id)
 
-	extended_user.delete_trash_messages(bot, TrashMessagesTypes.reminders.value)
+	extended_user.delete_trash_messages(bot, TrashMessagesTypes.disable_reminders.value)
 
-	disable_reminders(Call = Call)
+	disable_reminders(call)
 
-	bot.answer_callback_query(Call.id)
+	bot.answer_callback_query(call.id)
 
 @bot.callback_query_handler(func = lambda Callback: Callback.data == "change_reminders")
-def change_reminders(Call: types.CallbackQuery):
-	user = manager.auth(Call.from_user)
+def change_reminders(call: types.CallbackQuery):
+
+	user = manager.auth(call.from_user)
 	extended_user = ExtendedUser(user)
 	eventer = extended_user.eventer
 
@@ -414,6 +453,17 @@ def change_reminders(Call: types.CallbackQuery):
 
 	dialogs.exit_with_delete(extended_user, TrashMessagesTypes.change_reminders)
 		
-	bot.answer_callback_query(Call.id)
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("change_reminder_"))
+def change_reminder(call: types.CallbackQuery):
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+	extended_user.switching_working_event_id(int(call.data.split("_")[-1]))
+	extended_user.switching_status_working(StatusWorking.change)
+
+	dialogs.choice_reminder(extended_user)
+	
+	bot.answer_callback_query(call.id)
 
 bot.infinity_polling()				

@@ -1,8 +1,8 @@
 from Source.Core.ExtendedUser import ExtendedUser
+from Source.Core.Enums import StatusWorking
+from Source.Modules.Eventer import EventTypes
 
 from dublib.Engine.GetText import _
-
-from typing import Literal
 
 from telebot import types
 
@@ -11,42 +11,47 @@ def add_new_event() -> types.InlineKeyboardMarkup:
 
 	return types.InlineKeyboardMarkup([[types.InlineKeyboardButton(text = _("Создать событие"), callback_data = "create_event")]])
 
-def format_reminder(type_reminders: Literal["without_reminders", "without_counting"]) -> types.InlineKeyboardMarkup:
+def format_reminder(type_reminders: StatusWorking) -> types.InlineKeyboardMarkup:
 	"""
 	Выбор типа напоминаний.
 
 	:param type_reminders: Тип наборов кнопок.
-	:type type_reminders: Literal[&quot;without_reminders&quot;, &quot;without_counting&quot;]
-
-	1. Типы напоминаний для только что созданного события.
-	2. Типы напоминаний для только что созданного события, при нажатии на кнопку изменить.
+	:type type_reminders: StatusWorking
 	"""
 
 	menu = types.InlineKeyboardMarkup()
 
 	sets_reminders = {
-		"without_reminders": {
+		StatusWorking.new: {
 			_("Разовое напоминание"): "one_time_reminder",
 			_("Отсчитывать дни"): "count_down_event"
 		},
-		"without_counting": {
+		StatusWorking.hot_fix: {
 			_("Без напоминаний"): "without_reminders",
 			_("Создать разовое напоминание"): "one_time_reminder",
 			_("🔙 Назад"): "delete"
+		},
+		StatusWorking.change: {
+			_("Включить ежедневные напоминания"): "every_day_reminder",
+			_("Включить разовое напоминание"): "one_time_reminder",
+			_("Без напоминаний"): "without_reminders",
+			_("Оставить всё как есть"): "delete"
 		}
 	}
 	
-	for string in sets_reminders[type_reminders].keys(): menu.add(types.InlineKeyboardButton(string, callback_data = sets_reminders[type_reminders][string]), row_width = 1)
+	for text in sets_reminders[type_reminders].keys(): menu.add(types.InlineKeyboardButton(text, callback_data = sets_reminders[type_reminders][text]), row_width = 1)
 
 	return menu
 
-def confirm_reminder(type_reminders: Literal["without_reminders", "count_down_event"]) -> types.InlineKeyboardMarkup:
+def confirm_reminder(type_reminders: EventTypes.counting | EventTypes.no_nofifications) -> types.InlineKeyboardMarkup:
 	"""
 	Уточнение правильности выбора типа уведомлений.
 
 	:param type_reminders: Тип уведомлений, который должен быть включён.
-	:type type_reminders: Literal[&quot;without_reminders&quot;, &quot;count_down_event&quot;]
+	:type type_reminders: EventTypes.counting | EventTypes.no_nofifications
 	"""
+
+	type_reminders = type_reminders.value
 
 	menu = types.InlineKeyboardMarkup()
 
@@ -109,7 +114,7 @@ def	change_reminder_after_saving_event(extended_user: ExtendedUser, event_id: in
 	determinations = {
 		_("Изменить 🔔"): "fix_reminder",
 		_("Режим бота 🤭"): "bot_mode",
-		_("Спасибо, все супер!"): "for_delete"
+		_("Спасибо, все супер!"): "thanks"
 	}
 
 	if extended_user.user.has_property("change_reminder_after_saving_mode_bot"): 
@@ -118,7 +123,7 @@ def	change_reminder_after_saving_event(extended_user: ExtendedUser, event_id: in
 
 	else: 
 		determinations.pop(_("Режим бота 🤭"))
-		determinations = {k.replace(_("Изменить 🔔"), _("Настроить напоминания")): v for k, v in determinations.items()}
+		determinations = {k.replace(_("Изменить 🔔"), _("Изменить напоминания")): v for k, v in determinations.items()}
 		for string in determinations.keys(): menu.add(types.InlineKeyboardButton(string, callback_data = determinations[string]), row_width = 1)
 		
 	return menu
@@ -156,4 +161,4 @@ def change_reminder(event_id: int) -> types.InlineKeyboardMarkup:
 	:type event_id: int
 	"""
 
-	return types.InlineKeyboardMarkup([[types.InlineKeyboardButton(text = _("🔔 Изменить напоминание"), callback_data = f"change_reminders_{event_id}")]])
+	return types.InlineKeyboardMarkup([[types.InlineKeyboardButton(text = _("🔔 Изменить напоминание"), callback_data = f"change_reminder_{event_id}")]])

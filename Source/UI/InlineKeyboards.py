@@ -33,6 +33,19 @@ def delete(text: str) -> types.InlineKeyboardMarkup:
 
 	return menu
 
+def clearning(text: str) -> types.InlineKeyboardMarkup:
+	"""
+	Кнопка удаления нескольких сообщений.
+
+	:param text: Подпись кнопки удаления.
+	:type text: str
+	"""
+
+	menu = types.InlineKeyboardMarkup()
+	menu.add(types.InlineKeyboardButton(text, callback_data = "clearning")) 
+
+	return menu
+
 def choice_gender() -> types.InlineKeyboardMarkup:
 	"""Кнопки выбора пола."""
 

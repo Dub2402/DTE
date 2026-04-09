@@ -9,6 +9,7 @@ import dateparser
 
 if TYPE_CHECKING:
 	from dublib.TelebotUtils.Users import UserData
+	from Source.Core.ExtendedUser import ExtendedUser
 
 class EventTypes(enum.Enum):
 	passed = "passed"

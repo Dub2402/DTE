@@ -1,5 +1,5 @@
 from Source.Modules.Eventer import Eventer
-from Source.Core.Enums import BotModes, TrashMessagesTypes
+from Source.Core.Enums import BotModes, TrashMessagesTypes, StatusWorking
 
 from dublib.TelebotUtils import TeleMaster
 from dublib.Methods.Data import ToIterable
@@ -45,6 +45,18 @@ class ExtendedUser:
 		return self.__user
 
 	@property
+	def working_event_id(self) -> int | None:
+		"""Cтатус работы с ботом."""
+
+		return self.__user.get_property("working_event_id")
+	
+	@property
+	def status_working(self) -> str:
+		"""Cтатус работы с ботом."""
+
+		return self.__user.get_property("status_working")
+
+	@property
 	def eventer(self) -> Eventer:
 		"""Обработчик событий."""
 
@@ -78,6 +90,25 @@ class ExtendedUser:
 						MessagesID.append(MessageID)
 
 		return tuple(MessagesID)
+	
+	def __delete(self, MessagesID: tuple[int]):
+		"""
+		Удаление данных об удалённых сообщениях в данных пользователя.
+
+		:param MessagesID: Список id сообщений, которые были удалены.
+		:type MessagesID: tuple[int]
+		"""
+
+		Messages_with_types: list[str] = self.__user.get_property("trash_messages")
+	
+		for MessageID in MessagesID:
+			prefix = f"{MessageID}:"
+			for item in Messages_with_types:
+				if item.startswith(prefix):
+					Messages_with_types.remove(item)
+
+		self.__user.set_property("trash_messages", Messages_with_types)
+		
 
 	def __init__(self, user: "UserData"):
 		"""
@@ -105,14 +136,14 @@ class ExtendedUser:
 
 		masterbot = TeleMaster(bot)
 
-		if not types:
-			MessagesID = self.__get_messages_id()
-			masterbot.safely_delete_messages(self.__user.id, MessagesID, complex = True)
+		if not types: MessagesID = self.__get_messages_id()
 			
 		else:
 			types = ToIterable(types)
 			MessagesID = self.__get_messages_id(types)
-			masterbot.safely_delete_messages(self.__user.id, MessagesID, complex = True)
+
+		masterbot.safely_delete_messages(self.__user.id, MessagesID, complex = True)
+		self.__delete(MessagesID)
 
 	def remember_trash_message(self, message_id: int, type: TrashMessagesTypes | None = None):
 		"""
@@ -132,3 +163,23 @@ class ExtendedUser:
 
 		Messages.append(NewMessage)
 		self.__user.set_property("trash_messages", Messages)
+
+	def switching_working_event_id(self, event_id: int | None = None):
+		"""
+		Переключает на id события с которым мы в данный момент работаем.
+
+		:param event_id: Id cобытия, с которым мы в данный момент работаем, defaults to None
+		:type event_id: int | None, optional
+		"""
+
+		return self.__user.set_property("working_event_id", event_id)
+
+	def switching_status_working(self, status: StatusWorking):
+		"""
+		Меняет статус работы с ботом.
+
+		:param status: Статус работы с ботом.
+		:type status: StatusWorking
+		"""
+
+		return self.__user.set_property("status_working", status.value)

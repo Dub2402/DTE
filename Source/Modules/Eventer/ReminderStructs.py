@@ -13,7 +13,7 @@ class ReminderTime:
 		:rtype: str
 		"""
 
-		return f"{self.hour}:{self.minute}"
+		return f"{self.hour:02d}:{self.minute:02d}"
 
 @dataclass(frozen = True)
 class ReminderData:
