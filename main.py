@@ -79,7 +79,7 @@ def start(message: types.Message):
 		user.set_property("change_reminder_after_saving_mode_bot", True)
 
 	user.set_property("events", {}, force = False)
-	user.set_property("is_male", True)
+	user.set_property("is_male", True, force = False)
 	user.set_property("emoji", False)
 	user.reset_expected_type()
 	user.suppress_saving(False)
@@ -219,6 +219,16 @@ def delete(call: types.CallbackQuery):
 
 	bot.answer_callback_query(call.id)
 
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("delete_"))
+def delete_trash_message(call: types.CallbackQuery):
+	user = manager.auth(call.from_user)
+
+	type_trash_message = call.data.removeprefix("delete_")
+
+	ExtendedUser(user).delete_trash_messages(bot, type_trash_message)
+	
+	bot.answer_callback_query(call.id)
+
 @bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("gender_"))
 def gender(call: types.CallbackQuery):
 
@@ -319,7 +329,7 @@ def fix_reminder_date(call: types.CallbackQuery):
 	bot.answer_callback_query(call.id)
 
 @bot.callback_query_handler(func = lambda Callback: Callback.data == "fix_reminder")
-def fix_reminder_date(call: types.CallbackQuery):
+def fix_reminder(call: types.CallbackQuery):
 	"""Отправка сообщения при нажатии на изменить при сохранении новоиспечённого события."""
 
 	user = manager.auth(call.from_user)

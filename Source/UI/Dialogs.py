@@ -500,9 +500,28 @@ class UserDialogs:
 		:type extended_user: ExtendedUser
 		"""
 
+		mode = extended_user.bot_mode
+
+		texts = {
+			BotModes.classic:(_("И вам спасибо!\nХорошего дня! ))")),
+			BotModes.sweetie: (_("Ты же моё сокровище!)\nТебе спасибо 😘")),
+			BotModes.buddy: {
+				True: _("Да не за что, братуха!\nДавай, будем на связи!)"),
+				False: (_("Тебе спасибо, моя хорошая!\nРад был помочь! Увидимся еще!)"))
+			},
+			BotModes.motivator: (_("А по-другому и не может быть!)\nУдачи тебе во всем!")),
+			BotModes.gaslighter: (_("Закрой лучше, еб#льник!\nТебя никто не спрашивал тут")),
+			BotModes.random: (_("Ты же моё сокровище!)\nХорошего дня! ))"))
+		}
+		
+		if mode == BotModes.random: mode = random.choice(tuple(Value for Value in BotModes))
+		used_strings = texts[mode]
+
+		if type(used_strings) == dict: used_strings = used_strings[extended_user.is_male]
+		
 		self.__bot.send_message(
 			extended_user.user.id,
-			_("И вам спасибо!\nХорошего дня! ))"),
+			used_strings,
 			reply_markup = InlineKeyboards.emoji("❤️")
 		)
 
@@ -640,8 +659,6 @@ class UserDialogs:
 		number_event = 1
 
 		for event in extended_user.eventer.events_with_reminders:
-
-			print(event.id)
 
 			if event.notifications: event_type = EventTypes.counting
 			elif event.reminder.days_before_event == 0: event_type = EventTypes.half_reminder

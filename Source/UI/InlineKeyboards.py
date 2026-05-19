@@ -20,7 +20,7 @@ def settingsmenu() -> types.InlineKeyboardMarkup:
 	for string in determinations.keys(): menu.add(types.InlineKeyboardButton(string, callback_data = determinations[string]))
 	return menu
 
-def delete(text: str) -> types.InlineKeyboardMarkup:
+def delete(text: str, callback_data: str = "delete") -> types.InlineKeyboardMarkup:
 	"""
 	Кнопка удаления сообщения.
 
@@ -29,7 +29,7 @@ def delete(text: str) -> types.InlineKeyboardMarkup:
 	"""
 
 	menu = types.InlineKeyboardMarkup()
-	menu.add(types.InlineKeyboardButton(text, callback_data = "delete")) 
+	menu.add(types.InlineKeyboardButton(text, callback_data = callback_data))
 
 	return menu
 

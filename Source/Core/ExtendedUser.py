@@ -109,7 +109,6 @@ class ExtendedUser:
 
 		self.__user.set_property("trash_messages", Messages_with_types)
 		
-
 	def __init__(self, user: "UserData"):
 		"""
 		Расширенные данные пользователя.
@@ -144,7 +143,7 @@ class ExtendedUser:
 
 		masterbot.safely_delete_messages(self.__user.id, MessagesID, complex = True)
 		self.__delete(MessagesID)
-
+		
 	def remember_trash_message(self, message_id: int, type: TrashMessagesTypes | None = None):
 		"""
 		Запоминает сообщение для удаления в будущем.
