@@ -170,7 +170,7 @@ def text(message: types.Message):
 			user.reset_expected_type()
 			dialogs.ask_reminder_format(extended_user)
 		
-		case "reminder":
+		case "once_reminder":
 
 			#TO-DO: НАПОМИНАНИЕ ЗА 10 ДНЕЙ, А ОСТАЛОСЬ 5.
 			#TO-DO: НАПОМИНАНИЕ БОЛЬШЕ 365 ДНЕЙ.
@@ -195,6 +195,27 @@ def text(message: types.Message):
 			user.reset_expected_type()
 
 			dialogs.save_reminder(extended_user, working_event, count_elements)
+
+		case "daily_reminder":
+
+			new_event = extended_user.eventer.temp_event
+
+			input_reminder_data = message.text.strip().split()
+			count_elements = len(input_reminder_data)
+
+			if count_elements != 1: 
+				dialogs.error_input(extended_user)
+				return
+			
+			else: 
+				try: reminder_data = new_event.check_input_reminder(input_reminder_data, 1)
+				except AttributeError:
+					dialogs.error_input(extended_user)
+					return
+			
+			new_event.set_reminder(reminder_data)
+			dialogs.save_counting_event(extended_user, new_event)
+			new_event.untemp()
 	
 TimezonerDecorators(bot, manager, InlineKeyboards)
 ModesDecorators(bot, manager).inline_keyboards()
@@ -270,8 +291,8 @@ def counting(call: types.CallbackQuery):
 	if new_event.is_date_passed: dialogs.ask_format_counting(extended_user)
 	else: 
 		new_event.set_counter_type(EventTypes.remained)
-		dialogs.save_counting_event(extended_user, new_event)
-		new_event.untemp()
+		dialogs.ask_time_daily_reminder(extended_user)
+		user.set_expected_type("daily_reminder")
 
 	bot.answer_callback_query(call.id)
 
@@ -284,8 +305,9 @@ def save_counter_type(call: types.CallbackQuery):
 
 	counter_type = call.data.split("_")[-1]
 	new_event.set_counter_type(EventTypes(counter_type))
-	dialogs.save_counting_event(extended_user, new_event)
-	new_event.untemp()
+
+	dialogs.ask_time_daily_reminder(extended_user)
+	user.set_expected_type("daily_reminder")
 
 	bot.answer_callback_query(call.id)
 
@@ -299,7 +321,7 @@ def one_time(call: types.CallbackQuery):
 	else: extended_user.eventer.working_event.switching_notifications(False)
 
 	dialogs.ask_time_reminder(extended_user)
-	user.set_expected_type("reminder")
+	user.set_expected_type("once_reminder")
 
 	bot.answer_callback_query(call.id)
 
@@ -311,7 +333,7 @@ def another_day(call: types.CallbackQuery):
 	extended_user = ExtendedUser(user)
 
 	dialogs.ask_day_and_time_reminder(extended_user)
-	user.set_expected_type("reminder")
+	user.set_expected_type("once_reminder")
 	
 	bot.answer_callback_query(call.id)
 
@@ -324,7 +346,7 @@ def fix_reminder_date(call: types.CallbackQuery):
 
 	masterbot.safely_delete_messages(call.message.chat.id, call.message.id)
 	dialogs.ask_day_and_time_reminder(extended_user)
-	user.set_expected_type("reminder")
+	user.set_expected_type("once_reminder")
 
 	bot.answer_callback_query(call.id)
 
@@ -379,10 +401,23 @@ def without_reminders(call: types.CallbackQuery):
 @bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("every_day_reminder"))
 def every_day_reminder(call: types.CallbackQuery):
 	"""Подтверждение включения ежедневных напоминаний."""
+
 	user = manager.auth(call.from_user)
 	extended_user = ExtendedUser(user)
 	
 	dialogs.ask_change_reminders(extended_user, EventTypes.counting)
+
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("random_time_daily_reminder"))
+def random_time_daily_reminder(call: types.CallbackQuery):
+	"""Выбор стандартного времени для рассылки."""
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+	new_event = extended_user.eventer.temp_event
+
+	dialogs.save_counting_event(extended_user, new_event)
+	new_event.untemp()
 
 	bot.answer_callback_query(call.id)
 
@@ -475,5 +510,17 @@ def change_reminder(call: types.CallbackQuery):
 	dialogs.choice_reminder(extended_user)
 	
 	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("standart_time_every_reminders"))
+def time_every_reminders(call: types.CallbackQuery):
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+
+	# extended_user.switching_working_event_id(int(call.data.split("_")[-1]))
+	# extended_user.switching_status_working(StatusWorking.change)
+
+	# dialogs.choice_reminder(extended_user)
+	
+	# bot.answer_callback_query(call.id)
 
 bot.infinity_polling()				

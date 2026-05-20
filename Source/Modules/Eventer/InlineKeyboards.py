@@ -133,6 +133,11 @@ def choice_another_day() -> types.InlineKeyboardMarkup:
 
 	return types.InlineKeyboardMarkup([[types.InlineKeyboardButton(text = _("Хочу в другой день!"), callback_data = "another_day")]])
 
+def choice_time_daily_reminder() -> types.InlineKeyboardMarkup:
+	"""Выбор времени для напоминаний."""
+
+	return types.InlineKeyboardMarkup([[types.InlineKeyboardButton(text = _("Можно в любое"), callback_data = "random_time_daily_reminder")]])
+
 def remove_event(event_id: int) -> types.InlineKeyboardMarkup:
 	"""
 	Кнопка удаления события.

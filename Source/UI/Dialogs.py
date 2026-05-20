@@ -86,7 +86,9 @@ class UserDialogs:
 		}
 
 		bot_mode = extended_user.bot_mode
-		if bot_mode == BotModes.random: bot_mode = random.choice(tuple(Value for Value in BotModes))
+		if bot_mode == BotModes.random: 
+			available_modes = tuple(mode for mode in BotModes if mode != BotModes.random)
+			bot_mode = random.choice(available_modes)
 
 		used_strings = messages[bot_mode]
 		if type(used_strings) == dict: used_strings = used_strings[extended_user.is_male]
@@ -278,8 +280,8 @@ class UserDialogs:
 		time_reminder_message = self.__bot.send_message(
 			chat_id = extended_user.user.id,
 			text = _("В день события мы вам пришлём напоминание! 🛎 \n\nВ какое время вы бы хотели получить его?\n\n<i>Пример: 18:30</i>"),
-			reply_markup = EventsInlineKeyboards.choice_another_day(),
-			parse_mode = "HTML"
+			parse_mode = "HTML",
+			reply_markup = EventsInlineKeyboards.choice_another_day()
 			)
 		
 		extended_user.remember_trash_message(time_reminder_message.id, TrashMessagesTypes.events)
@@ -301,6 +303,23 @@ class UserDialogs:
 			)
 
 		extended_user.remember_trash_message(day_and_time_reminder_message.id, TrashMessagesTypes.events)
+
+	def ask_time_daily_reminder(self, extended_user: ExtendedUser):
+		"""
+		Отправляет сообщение о необходимости выбрать время для ежедневных напоминаний.
+
+		:param extended_user: Расширенные данные пользователя.
+		:type extended_user: ExtendedUser
+		"""
+
+		time_daily_reminder_message = self.__bot.send_message(
+			chat_id = extended_user.user.id,
+			text = _("В какое время присылать напоминания?\n\n<i>Пример: 12:30</i>"),
+			parse_mode = "HTML",
+			reply_markup = EventsInlineKeyboards.choice_time_daily_reminder()
+			)
+		
+		extended_user.remember_trash_message(time_daily_reminder_message.id, TrashMessagesTypes.events)
 
 	def error_input(self, extended_user: ExtendedUser):
 		"""
@@ -432,10 +451,10 @@ class UserDialogs:
 
 		texts = {
 			EventTypes.today: _("Ваше событие $name сегодня!!! 😊"),
-			EventTypes.remained: _("До события <b>$name</b> осталось $remains $days!\n\nБудем ждать его вместе с <u>ежедневными напоминаниями!</u> 🛎"),
+			EventTypes.remained: _("До события <b>$name</b> осталось $remains $days!\n\nКаждый день мы вам будем напоминать о нем в <u>$time!</u> 🛎"),
 			EventTypes.passed: _("Ваше событие <b>$name</b> произошло $remains $days назад!")
 		}
-
+	
 		difference = event.calculate_date_difference()
 
 		event_type = EventTypes.today if difference == 0 else event.counter_type
@@ -444,7 +463,8 @@ class UserDialogs:
 		replaces = {
 			"$name": event.name,
 			"$remains": str(abs(difference)),
-			"$days": event.formating_word_day(difference)
+			"$days": event.formating_word_day(difference),
+			"$time": event.reminder.time.to_string() if event.reminder else "рандомное время"
 		}
 		for start_replace in replaces.keys(): final_text = final_text.replace(start_replace, replaces[start_replace])
 
@@ -687,7 +707,7 @@ class UserDialogs:
 		"""
 
 		preparation_texts = {
-			EventTypes.counting: "$number_event) " + _("<b>$name</b>\nУстановлены ежедневные напоминания!"),
+			EventTypes.counting: "$number_event) " + _("<b>$name</b>\nУстановлены ежедневные напоминания $time!"),
 			EventTypes.half_reminder: "$number_event) " + _("<b>$name</b>\nНапоминание установлено на $time день в день!"),
 			EventTypes.full_reminder: "$number_event) " + _("<b>$name</b>\nНапоминание установлено на $time за $days_before_event!"),
 			EventTypes.no_nofifications: "$number_event) " + _("<b>$name</b>\nНапоминание отключено!"),
@@ -697,6 +717,8 @@ class UserDialogs:
 			"$name": current_event.name,
 			"$number_event": str(number_event)
 		}
+
+		if event_type == EventTypes.counting: replaces["$time"] = current_event.reminder.time.to_string() if current_event.reminder else "в рандомное время"
 
 		if event_type in (EventTypes.half_reminder, EventTypes.full_reminder): replaces["$time"] = current_event.reminder.time.to_string() 
 		
@@ -712,7 +734,6 @@ class UserDialogs:
 			"disable_reminders": EventsInlineKeyboards.disable_reminder(current_event.id),
 			"change_reminders": EventsInlineKeyboards.change_reminder(current_event.id)
 		}
-
 
 		reminder_message = self.__bot.send_message(
 			extended_user.user.id,
