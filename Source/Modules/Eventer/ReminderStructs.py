@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import time
 
 @dataclass(frozen = True)
 class ReminderTime:
@@ -14,6 +15,15 @@ class ReminderTime:
 		"""
 
 		return f"{self.hour:02d}:{self.minute:02d}"
+	
+	def to_time(self) -> time:
+		"""
+		Отображение времени напоминания пользователя в формате time.
+
+		:return: Время напоминания в time.
+		:rtype: time
+		"""
+		return time(hour=self.hour, minute=self.minute)
 
 @dataclass(frozen = True)
 class ReminderData:

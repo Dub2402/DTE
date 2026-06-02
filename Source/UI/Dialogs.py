@@ -10,15 +10,15 @@ from dublib.Engine.GetText import _
 
 from time import sleep
 import random
-import os
 
 import telebot
 
 class UserDialogs:
 
-	def __init__(self, bot: telebot.TeleBot, cacher: TeleCache):
+	def __init__(self, bot: telebot.TeleBot, cacher: TeleCache, language: str):
 		self.__bot = bot
 		self.__cacher = cacher
+		self.__language = language
 
 	def info(self, user: UserData):
 		"""
@@ -75,14 +75,14 @@ class UserDialogs:
 		extended_user = ExtendedUser(user)
 
 		messages = {
-			BotModes.classic: (None, ", мы рады тебя видеть снова! 🤗"),
-			BotModes.sweetie: (None, ", солнышко моё! Рад, что ты тут! Я скучал 💕"),
+			BotModes.classic: (None, _(", мы рады тебя видеть снова! 🤗")),
+			BotModes.sweetie: (None, _(", солнышко моё! Рад, что ты тут! Я скучал 💕")),
 			BotModes.buddy: {
-				True: (None, ", братишка! Красссавчик, что вернулся! Рад тебя видеть! 🔥"),
-				False: ("Оуу,", ", девочка моя!) Ты опять тут!? Как я рад тебя видеть! 🔥")
+				True: (None, _(", братишка! Красссавчик, что вернулся! Рад тебя видеть! 🔥")),
+				False: _("Оуу,", ", девочка моя!) Ты опять тут!? Как я рад тебя видеть! 🔥")
 			},
-			BotModes.motivator: ("Какие люди!", ", ты ли?) Ну наконец-то, наш лидер вернулся! 🏆"),
-			BotModes.gaslighter: (None, " г#вно еб#ное! Ты че тут опять трешься?) А ну сваливай нах#й!"),
+			BotModes.motivator: _("Какие люди!", ", ты ли?) Ну наконец-то, наш лидер вернулся! 🏆"),
+			BotModes.gaslighter: (None, _(", г#вно еб#ное! Ты че тут опять трешься?) А ну сваливай нах#й!")),
 		}
 
 		bot_mode = extended_user.bot_mode
@@ -422,7 +422,7 @@ class UserDialogs:
 		replaces = {
 			"$name": current_event.name,
 			"$remains": str(difference),
-			"$days": current_event.formating_word_day(difference),
+			"$days": current_event.formating_word_day(difference, self.__language),
 			"$number_event": str(number_event)
 		}
 
@@ -463,7 +463,7 @@ class UserDialogs:
 		replaces = {
 			"$name": event.name,
 			"$remains": str(abs(difference)),
-			"$days": event.formating_word_day(difference),
+			"$days": event.formating_word_day(difference, self.__language),
 			"$time": event.reminder.time.to_string() if event.reminder else "рандомное время"
 		}
 		for start_replace in replaces.keys(): final_text = final_text.replace(start_replace, replaces[start_replace])
@@ -499,7 +499,7 @@ class UserDialogs:
 			"$name": event.name,
 			"$time": event.reminder.time.to_string(),
 			"$days_before_event": str(days_before_event), 
-			"$days": event.formating_word_day(days_before_event)
+			"$days": event.formating_word_day(days_before_event, self.__language)
 		}
 		for start_replace in replaces.keys(): final_text = final_text.replace(start_replace, replaces[start_replace])
 
@@ -797,7 +797,7 @@ class UserDialogs:
 
 		exit_message = self.__bot.send_message(
 			extended_user.user.id,
-			_("<b>Для выхода</b> в предыдущее меню нажмите \"Назад\":"),
+			_("<b>" + _("Для выхода") + "</b>" + _(" в предыдущее меню нажмите \"Назад\":")),
 			reply_markup = InlineKeyboards.delete(_("🔙 Назад")),
 			parse_mode = "HTML"
 		)
@@ -812,7 +812,7 @@ class UserDialogs:
 		:type user: ExtendedUser
 		"""
 
-		path = MediaPath.qr_code_ru if os.environ["DTE_LANG"]  == "ru" else MediaPath.qr_code_en
+		path = MediaPath.qr_code_ru if self.__language  == "ru" else MediaPath.qr_code_en
 
 		self.__bot.send_photo(
 			chat_id = extended_user.user.id,  

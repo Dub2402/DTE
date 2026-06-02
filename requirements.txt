@@ -1,3 +1,2 @@
 -r Source/TeleBotAdminPanel/requirements.txt
-dublib[telebot]==0.24.3
 dotenv

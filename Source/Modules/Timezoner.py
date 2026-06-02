@@ -1,5 +1,7 @@
-from Source.UI import InlineKeyboards
 from Source.Modules.Eventer import InlineKeyboards as EventsInlineKeyboards
+from Source.UI import InlineKeyboards as MainInlineKeyboards
+from Source.Core.ExtendedUser import ExtendedUser
+from Source.Core.Enums import TrashMessagesTypes
 
 from dublib.TelebotUtils.Users import UsersManager
 from dublib.Engine.GetText import _
@@ -39,7 +41,7 @@ def CorrectUserTime(user_time: str, delta: int) -> datetime:
 # >>>>> НАБОРЫ ДЕКОРАТОРОВ <<<<< #
 #==========================================================================================#
 
-def TimezonerDecorators(bot: TeleBot, users: UsersManager, inline_keyboard: InlineKeyboards):
+def TimezonerDecorators(bot: TeleBot, users: UsersManager):
 	"""
 	Набор декораторов для обработки выбора часового пояса.
 
@@ -73,37 +75,57 @@ def TimezonerDecorators(bot: TeleBot, users: UsersManager, inline_keyboard: Inli
 
 	@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("tz_select"))
 	def TimezoneSelect(Call: types.CallbackQuery):
-		User = users.auth(Call.from_user)
-		bot.delete_message(Call.message.chat.id, Call.message.id)
+		user = users.auth(Call.from_user)
+		extended_user = ExtendedUser(user)
 		TimezoneCode = int(Call.data[len("tz_select_"):].replace("m", "-"))
-		User.set_property("timezone", TimezoneCode)
 
-		bot.send_message(
-			chat_id = Call.message.chat.id,
-			text = _("Отлично! Вот и настроили!\n\nПришла пора создать ваше первое событие! 🙌"), 
-			reply_markup = EventsInlineKeyboards.add_new_event(),
-			parse_mode = "HTML"
+		if not user.has_property("timezone"):
+			conclusion_message = bot.send_message(
+				chat_id = Call.message.chat.id,
+				text = _("Отлично! Вот и настроили!\n\nПришла пора создать ваше первое событие! 🙌"), 
+				reply_markup = EventsInlineKeyboards.add_new_event(),
+				parse_mode = "HTML"
 			)
-		
+		else:
+			TimezoneValue: int = user.get_property("timezone")
+			TimezoneDelay = timezone(timedelta(hours = TimezoneValue))
+			CurrentTime = datetime.now(TimezoneDelay)
+			TimezoneName = f"UTC{TimezoneValue}, " + CurrentTime.strftime("%H:%M")
+
+			extended_user.delete_trash_messages(bot, TrashMessagesTypes.acquaintance.value)
+
+			conclusion_message = bot.send_message(
+				chat_id = Call.message.chat.id,
+				text = _("Вы выбрали часовой пояс %T.").replace("%T", TimezoneName), 
+				reply_markup = MainInlineKeyboards.delete(_("Да, все верно!"), "delete_" + TrashMessagesTypes.acquaintance.value),
+				parse_mode = "HTML"
+			)
+
+		user.set_property("timezone", TimezoneCode)
+		extended_user.remember_trash_message(conclusion_message.id, TrashMessagesTypes.acquaintance)
+
 		bot.answer_callback_query(Call.id)
 	
 	@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("tz_change"))
 	def TimezoneChange(Call: types.CallbackQuery):
-		User = users.auth(Call.from_user)
+		user = users.auth(Call.from_user)
+		extended_user = ExtendedUser(user)
 
-		bot.send_message(
+		choice_timezone_message = bot.send_message(
 			chat_id = Call.message.chat.id,
 			text = _("Выберите, пожалуйста, ваш новый часовой пояс:"), 
 			reply_markup = TimezonerInlineKeyboards().timezone_first_page(),
 			parse_mode = "HTML"
 			)
+		extended_user.remember_trash_message(choice_timezone_message.id, TrashMessagesTypes.acquaintance)
 		
-		bot.send_message(
+		exit_message = bot.send_message(
 			chat_id = Call.message.chat.id,
-			text = _("<b>" + _("Для выхода") + "</b>" + _("в предыдущее меню нажмите \"Назад\":")), 
-			reply_markup = inline_keyboard.SteakActions(name_button = _("🔙 Назад"), delete = "MessageNotificationsDeactivate"),
+			text = _("<b>" + _("Для выхода") + "</b>" + _(" в предыдущее меню нажмите \"Назад\":")), 
+			reply_markup = MainInlineKeyboards.delete(_("🔙 Назад"), "delete_" + TrashMessagesTypes.acquaintance.value),
 			parse_mode = "HTML"
 			)
+		extended_user.remember_trash_message(exit_message.id, TrashMessagesTypes.acquaintance)
 		
 		bot.answer_callback_query(Call.id)
 

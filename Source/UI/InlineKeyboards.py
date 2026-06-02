@@ -10,7 +10,7 @@ def settingsmenu() -> types.InlineKeyboardMarkup:
 	determinations = {
 		_("🔕 Отключить напоминания"): "disable_reminders",
 		_("🔔 Изменить напоминания"): "change_reminders",
-		_("🕰 Время ежедн. напоминаний"): "time_every_reminders",
+		_("🕰 Время ежедн. напоминаний"): "standart_time_every_reminders",
 		_("🤭 Режим бота"): "bot_mode",
 		_("🔁 Сменить имя и пол"): "change_name",
 		_("🌐 Сменить часовой пояс"): "tz_change",

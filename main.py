@@ -5,6 +5,7 @@ from Source.Core.ExtendedUser import ExtendedUser
 from Source.Modules.Eventer import EventTypes
 from Source.TeleBotAdminPanel import Panel
 from Source.UI.Dialogs import UserDialogs
+from Source.Core.Mailer import Mailer
 from Source.UI import InlineKeyboards
 from Source.Core import MediaChecker
 
@@ -17,8 +18,9 @@ from dublib.Methods.System import Clear
 import logging
 import os
 
-from telebot import TeleBot, types
+from apscheduler.schedulers.background import BackgroundScheduler
 from telebot.types import ReactionTypeEmoji
+from telebot import TeleBot, types
 from dotenv import load_dotenv
 
 #---> Инициализация объектов.
@@ -29,22 +31,27 @@ Clear()
 settings = Config("Settings.json")
 settings.load()
 load_dotenv()
-if not os.environ.get("DTE_LANG"): os.environ["DTE_LANG"] = "ru"
 
-MediaChecker.check_media()
+MediaChecker.check_media(settings["language"])
 
-bot = TeleBot(settings["token"])
+bot = TeleBot(os.environ.get("token"))
 masterbot = TeleMaster(bot)
 manager = UsersManager("Data/Users")
-adminpanel = Panel(bot, manager, settings["password"])
+adminpanel = Panel(bot, manager, os.environ.get("password"))
+
+scheduler = BackgroundScheduler()
+scheduler.remove_all_jobs()
+mailer = Mailer(bot, manager, scheduler, settings)
+scheduler.add_job(mailer.handler_notifications, 'interval', seconds=60)
+scheduler.start()
 
 cacher = TeleCache()
 cacher.set_bot(bot)
-cacher.set_chat_id(settings["chat_id"])
+cacher.set_chat_id(os.environ.get("chat_id"))
 
-dialogs = UserDialogs(bot, cacher)
+dialogs = UserDialogs(bot, cacher, settings["language"])
 
-GetText.initialize("DTE", settings["language"], "locales")
+GetText.initialize("DTE", settings["language"], settings["locale_dir"])
 _ = GetText.gettext
 
 #---> Настройка логгирования.
@@ -53,7 +60,7 @@ _ = GetText.gettext
 logging.basicConfig(
 	level = logging.INFO,
 	encoding = "utf-8",
-	filename = "LOGING.log",
+	filename = "logging.log",
 	filemode = "w",
 	format = '%(asctime)s - %(levelname)s - %(message)s',
 	datefmt = '%Y-%m-%d %H:%M:%S'
@@ -217,7 +224,7 @@ def text(message: types.Message):
 			dialogs.save_counting_event(extended_user, new_event)
 			new_event.untemp()
 	
-TimezonerDecorators(bot, manager, InlineKeyboards)
+TimezonerDecorators(bot, manager)
 ModesDecorators(bot, manager).inline_keyboards()
 
 @bot.callback_query_handler(func = lambda Callback: Callback.data == "clearning")
@@ -512,7 +519,7 @@ def change_reminder(call: types.CallbackQuery):
 	bot.answer_callback_query(call.id)
 
 @bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("standart_time_every_reminders"))
-def time_every_reminders(call: types.CallbackQuery):
+def standart_time_every_reminders(call: types.CallbackQuery):
 	user = manager.auth(call.from_user)
 	extended_user = ExtendedUser(user)
 
@@ -521,6 +528,6 @@ def time_every_reminders(call: types.CallbackQuery):
 
 	# dialogs.choice_reminder(extended_user)
 	
-	# bot.answer_callback_query(call.id)
+	bot.answer_callback_query(call.id)
 
 bot.infinity_polling()				

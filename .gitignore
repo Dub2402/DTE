@@ -1,8 +1,25 @@
-.venv
-__pycache__
+# Виртуальное окружение
+.venv/
 
-Media
-Data
-LOGING.log
-.telecache.json
+# Переменные окружения
 .env
+!.env.example
+
+# IDE и настройки редактора
+.vscode/
+
+# Логи
+*.log
+
+# Кэш
+__pycache__/
+.telecache.json
+
+# Локальные файлы 
+Data/Users/*
+
+Resources/Media/*
+!Resources/Media/.gitkeep
+
+Resources/Modes/*
+!Resources/Modes/.gitkeep

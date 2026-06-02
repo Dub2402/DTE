@@ -1,7 +1,7 @@
 from .ReminderStructs import ReminderData, ReminderTime
 
-from typing import Any, TYPE_CHECKING
 from datetime import date as datetime_date
+from typing import Any, TYPE_CHECKING
 import enum
 import os
 
@@ -76,6 +76,12 @@ class Event:
 		"""Состояние: прошла ли эта дата в этом году."""
 		
 		return datetime_date.today() > self.date.replace(year = datetime_date.today().year)
+	
+	@property
+	def is_day_today(self) -> bool:
+		"""Состояние: дата события """
+
+		datetime_date.today() == self.date
 
 	def __parse_reminder_data(self, data: dict[str, int | str]) -> ReminderData | None:
 		"""
@@ -166,17 +172,19 @@ class Event:
 
 		return abs(delta.days)
 		
-	def formating_word_day(self, difference: int) -> str:
+	def formating_word_day(self, difference: int, language: str) -> str:
 		"""
 		Согласовывает слово "день" по падежу, числу и языку.
 
 		:param difference: Разница во времени между датами (в днях).
 		:type difference: int
+		:param language: Код языка.
+		:type language: str
 		:return: Результирующее слово.
 		:rtype: str
 		"""
 
-		match os.environ["DTE_LANG"]:
+		match language:
 
 			case "en":
 				days = "day" if difference in (1,) else "days"
@@ -435,3 +443,4 @@ class Eventer:
 		buffer: dict[str, dict] = dict()
 		for id, current_event in self.__events.items(): buffer[str(id)] = current_event.to_dict()
 		self.__user.set_property("events", buffer)
+

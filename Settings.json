@@ -1,6 +1,18 @@
 {
-	"token": "",
-	"password": "",
-	"start_remindering": "07:00",
-	"chat_id": null
+	"language": "ru",
+	"locale_dir": "Resources/locale",
+	"reminder_range": {
+		"hours": [
+			7,
+			20
+		],
+		"minutes": [
+			0,
+			59
+		]
+	},
+	"default_reminder_today": [
+		7,
+		1
+	]
 }

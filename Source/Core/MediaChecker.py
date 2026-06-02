@@ -5,7 +5,14 @@ from dublib.CLI.TextStyler import FastStyler
 from pathlib import Path
 import os
 
-def check_media():
+def check_media(language: str):
+	"""
+	Проверка присутствия всех необходимых для запуска бота медиафайлов с учётом выбранного языка. 
+
+	:param language: Код языка.
+	:type language: str
+	"""
+
 	is_validated = True
 
 	for element in MediaPath:
@@ -14,10 +21,9 @@ def check_media():
 			print(FastStyler(f"File \"{element.value}\" exists.").colorize.green)
 
 		else:
-			LANG = os.environ["DTE_LANG"]
 			element_name = Path(element.value).stem
 
-			if element_name.endswith(f"_{LANG}"):
+			if element_name.endswith(f"_{language}"):
 				print(FastStyler(f"File \"{element.value}\" not found.").colorize.red)
 				is_validated = False
 
