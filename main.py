@@ -1,928 +1,533 @@
-from dublib.Engine.GetText import GetText
-from Source.Functions import CheckValidDate, GetValidTime, LimitationOnceReminders
-from Source.Bot_Addition import *
+from Source.Modules.Timezoner import TimezonerInlineKeyboards, TimezonerDecorators
+from Source.Core.Enums import TrashMessagesTypes, StatusWorking
+from Source.Modules.Modes.Decorators import Decorators as ModesDecorators
+from Source.Core.ExtendedUser import ExtendedUser
+from Source.Modules.Eventer import EventTypes
 from Source.TeleBotAdminPanel import Panel
-from Source.UI.InlineKeyboards import InlineKeyboard
-from Source.UI.ReplyKeyboard import ReplyKeyboard
-from Source.Mailer import Mailer
-from Source.Modules.Mode import Modes, Data as DataModes
-from Source.Events import Core as CoreEvents, Additional, EventsData
+from Source.UI.Dialogs import UserDialogs
+from Source.Core.Mailer import Mailer
+from Source.UI import InlineKeyboards
+from Source.Core import MediaChecker
 
-from Source.Modules.Timezoner import TimezonerInlineKeyboards, TimezonerDecorators, CorrectUserTime, Replacing_timezone
-import Source.AdminPanelExtensions
-import Source.AdditionalColumns
+from dublib.TelebotUtils import TeleCache, TeleMaster, UsersManager
+from dublib.Engine.Configurator import Config
+from dublib.Engine.GetText import GetText
+from dublib.Methods.Data import Zerotify
+from dublib.Methods.System import Clear
 
-from dublib.Methods.Filesystem import ReadJSON
-from dublib.Methods.System import CheckPythonMinimalVersion, Clear
-from dublib.TelebotUtils import UsersManager
-from dublib.TelebotUtils.Cache import TeleCache
-from dublib.TelebotUtils.Master import TeleMaster
-
-import telebot
 import logging
-from telebot import types
-from time import sleep
-from datetime import datetime, timezone
-from apscheduler.schedulers.background import BackgroundScheduler
+import os
 
-CheckPythonMinimalVersion(3, 10)
+from apscheduler.schedulers.background import BackgroundScheduler
+from telebot.types import ReactionTypeEmoji
+from telebot import TeleBot, types
+from dotenv import load_dotenv
+
+#---> Инициализация объектов.
+#==========================================================================================#
+
 Clear()
 
-logging.basicConfig(level=logging.INFO, encoding="utf-8", filename="LOGING.log", filemode="w",
-	format='%(asctime)s - %(levelname)s - %(message)s',
-	datefmt='%Y-%m-%d %H:%M:%S')
+settings = Config("Settings.json")
+settings.load()
+load_dotenv()
 
+MediaChecker.check_media(settings["language"])
+
+bot = TeleBot(os.environ.get("token"))
+masterbot = TeleMaster(bot)
+manager = UsersManager("Data/Users")
+adminpanel = Panel(bot, manager, os.environ.get("password"))
+
+scheduler = BackgroundScheduler()
+scheduler.remove_all_jobs()
+mailer = Mailer(bot, manager, scheduler, settings)
+scheduler.add_job(mailer.handler_notifications, 'interval', seconds=60)
+scheduler.start()
+
+cacher = TeleCache()
+cacher.set_bot(bot)
+cacher.set_chat_id(os.environ.get("chat_id"))
+
+dialogs = UserDialogs(bot, cacher, settings["language"])
+
+GetText.initialize("DTE", settings["language"], settings["locale_dir"])
+_ = GetText.gettext
+
+#---> Настройка логгирования.
+#==========================================================================================#
+
+logging.basicConfig(
+	level = logging.INFO,
+	encoding = "utf-8",
+	filename = "logging.log",
+	filemode = "w",
+	format = '%(asctime)s - %(levelname)s - %(message)s',
+	datefmt = '%Y-%m-%d %H:%M:%S'
+)
 logging.getLogger("pyTelegramBotAPI").setLevel(logging.WARNING)
 logging.getLogger("requests").setLevel(logging.WARNING)
 
-Settings = ReadJSON("Settings.json")
+#---> Взаимодействие с ботом.
+#==========================================================================================#
 
-GetText.initialize("DTE", Settings["language"], "locales")
-_ = GetText.gettext
+@bot.message_handler(commands = ["start"])
+def start(message: types.Message):
 
-Bot = telebot.TeleBot(Settings["token"])
-telemaster = TeleMaster(Settings["token"])
-Manager = UsersManager("Data/Users")
-reply_keyboard = ReplyKeyboard()
-AdminPanel = Panel()
-Cacher = TeleCache()
-modes = Modes(Manager, Bot)
+	is_new_user = not manager.is_user_exists(message.from_user.id)
+	user = manager.auth(user = message.from_user) 
 
-Cacher.set_bot(Bot)
-Cacher.set_chat_id(Settings["chat_id"])
-scheduler = BackgroundScheduler()
+	user.suppress_saving(True)
 
-mailer = Mailer(Bot, Manager, Settings["language"])
+	if is_new_user:
+		user.set_property("mode", "classic")
+		user.set_property("is_mode_choice", False)
+		user.set_property("create_reminder", True)
+		user.set_property("change_reminder_after_saving_mode_bot", True)
 
-scheduler.add_job(mailer.Start, 'cron', hour = Settings["start_remindering"].split(":")[0], minute = Settings["start_remindering"].split(":")[1], args = [["MessagesDaily", "MessagesTodayDefault"]])
-scheduler.add_job(mailer.Start, 'cron', hour = '*', minute = '*', args = [["MessagesOnce", "MessagesTodaywithTime"]])
-scheduler.start()
-
-AdminPanel.decorators.commands(Bot, Manager, Settings["password"])
-
-Manager.clear_temp_properties()
-
-@Bot.message_handler(commands = ["start"])
-def ProcessCommandStart(Message: types.Message):
-	""" 
-	Создание в пользовательском файле "New_User", если пользователь первый раз нажал /start.
-		Отправка приветственного сообщения.
-	"""
-
-	if not Manager.is_user_exists(Message.from_user.id):
-		User = Manager.auth(Message.from_user)
-		User.set_property("New_User", True)
-
-	User = Manager.auth(Message.from_user)
-	User.set_property("events", {}, False)
-	User.set_property("emoji", False)
-	User.set_expected_type(None)
+	user.set_property("events", {}, force = False)
+	user.set_property("is_male", True, force = False)
+	user.set_property("emoji", False)
+	user.reset_expected_type()
+	user.suppress_saving(False)
 	
-	try:
-		StartID = Cacher.get_real_cached_file(Settings["start_jpg"], types.InputMediaPhoto)
-		Bot.send_photo(
-			Message.chat.id, 
-			photo = StartID.file_id,
-			caption = _("<b>ДОБРО ПОЖАЛОВАТЬ!</b>\n\nЯ бот, помогающий запоминать события и узнавать, сколько дней до них осталось."),
-			parse_mode = "HTML"
-		)
-	except Exception as E: print(f"Проблема с кэшированием файла, при отправке сообщения. Проверьте файл Settings.json {E}")
+	dialogs.start(user)  
+	
+	if user.has_property("call"): dialogs.greeting(user)
 		
-	if User.has_property("call"):
-		call = User.get_property("call")
-		Bot.send_message(
-			Message.chat.id, 
-			call + _(", мы рады тебя видеть снова! 🤗"),
-			reply_markup = reply_keyboard.AddMenu()
-			)
 	else:
-		Bot.send_message(
-			Message.chat.id, 
-			_("Давайте познакомимся!\nНапишите свое имя! 🤗")
-			)
-		User.set_expected_type("call")
+		dialogs.ask_name(user)
+		user.set_expected_type("call")
 
-AdminPanel.decorators.reply_keyboards(Bot, Manager)
+@bot.message_handler(commands = ["admin"])
+def admin(message: types.Message):
 
-@Bot.message_handler(commands = ["infa"])
-def ProcessInfa(Message: types.Message):
-
-	User = Manager.auth(Message.from_user)
-	Text = (_("@Dnido_bot предназначен для запоминания событий, отслеживания дней, а также установки различных напоминаний!\n"),
-	_("<b>Здесь вы можете:</b>\n- Отсчитывать дни ДО события"),
-	_("- Отсчитывать дни ПОСЛЕ события"),
-	_("- Ставить напоминания о событии день в день в определенное время"),
-	_("- Ставить напоминание о событии день в день без определенного времени (по умолчанию в 7 утра)"),
-	_("- Ставить напоминание о событии за несколько дней до события в определенное время\n"),
-	_("На каждое событие вы можете изменить тип напоминания в любой момент)\n"),
-	_("<b><i>Пользуйтесь, и не забывайте делиться с друзьями!</i></b>")
-	)
-	MessageInfo = Bot.send_message(
-		Message.chat.id,
-		text = "\n".join(Text),
-		parse_mode = "HTML",
-		reply_markup = InlineKeyboard.SteakActions(name_button = _("Ясненько"), delete = "MessageInfo")
-	)
-	User.set_temp_property("MessageInfo", MessageInfo.id)
-
-@Bot.message_handler(content_types = ["text"], regexp = "✏️ "+ _("Новое событие"))
-def ProcessTextNewEvent(Message: types.Message):
-	"""Отправка сообщения об ожидании ввода названия события."""
-
-	User = Manager.auth(Message.from_user)
-	text = _("Введите, пожалуйста, название события, которое вы так ждёте!")
-	MessageWaitingName(Bot, Message, InlineKeyboard, User, text)
-
-@Bot.message_handler(content_types = ["text"], regexp = _("🛎 Настройка напоминаний"))
-def ProcessSettingsReminders(Message: types.Message):
-	User = Manager.auth(Message.from_user)
+	user = manager.auth(message.from_user)
 	
-	MessageSettings = Bot.send_message(
-		Message.chat.id, 
-		_("Выберите пункт, который вы хотите настроить:"),
-		reply_markup = InlineKeyboard.SettingsMenu())
+	password = message.text.split(" ")[1:]
+	password = " ".join(password).strip()
 
-	SaveMessageID(User, MessageSettings.id, ["MessageSettings"])
-	
-@Bot.message_handler(content_types = ["text"], regexp = "📜 " + _(" Мои события"))
-def ProcessTextMyEvents(Message: types.Message):
-	User = Manager.auth(Message.from_user)
-	
-	CoreEvents(User, Bot, Settings).my_events()
+	if not adminpanel.login(user, Zerotify(password)):
+		bot.send_message(user.id, "Доступ запрещён.")
 
-@Bot.message_handler(content_types = ["text"], regexp = _("👄 Поделиться с друзьями"))
-def ProcessShareWithFriends(Message: types.Message):
-	User = Manager.auth(Message.from_user)
-	try:
-		ShareID = Cacher.get_real_cached_file(Settings["share_image_path"], types.InputMediaPhoto)
-		Bot.send_photo(
-			Message.chat.id, 
-			photo = ShareID.file_id,
-			caption = _("@Dnido_bot\n@Dnido_bot\n@Dnido_bot\n\nПросто <b>Т-т-топовый</b> бот для отсчёта дней до событий 🥳\n\n<b><i>Пользуйся и делись с друзьями!</i></b>"), 
-			reply_markup = InlineKeyboard.AddShare(),
-			parse_mode = "HTML" 
-			)
-	except Exception as E: print(f"Проблема с кэшированием файла share_image: {E}")
-
-@Bot.message_handler(content_types = ["text"])
-def ProcessText(Message: types.Message):
-	User = Manager.auth(Message.from_user)
-	if AdminPanel.procedures.text(Bot, Manager, Message): return
-
-	if User.expected_type == "call":
-		SaveMessageID(User, Message.id, ["Changename"])
-		User.set_property("call", Message.text)
-		User.set_expected_type(None)
-
-		Changename = Bot.send_message(
-			Message.chat.id,
-			_("Приятно познакомиться, %s!") % Message.text,
-			reply_markup = reply_keyboard.AddMenu()
-			)
-		SaveMessageID(User, Changename.id, ["Changename"])
-		Changename = Bot.send_message(
-			Message.chat.id,
-			_("Укажите, пожалуйста, ваш пол. Это для лучшей адаптации бота под вас:"),
-			reply_markup = InlineKeyboard.ChoiceGender()
-			)
-		SaveMessageID(User, Changename.id, ["Changename"])
-		
-		return
-	
-	if User.expected_type == "name":
-		User.set_temp_property("Name", Message.text)
-
-		Bot.send_message(
-			Message.chat.id,
-			_("А теперь мне нужна дата вашего события 🤔 \n\n<i>Пример: 01.01.2000</i>"), 
-			parse_mode = "HTML")
-		User.set_expected_type("date")
-
-		return
-	
-	if User.expected_type == "date":
-		if CheckValidDate(Message.text) == True:
-			User.set_temp_property("Date", Message.text)
-			remains = Additional.Calculator(Message.text)
-			User.set_expected_type(None)
-			User.set_temp_property("Format", "Remained")
-			New_User = False
-			if User.has_property("New_User"): 
-				New_User = True
-				User.remove_property("New_User")
-			DeleteMessageNotification = SendFormatReminders(Bot, InlineKeyboard, Message, New_User)
-			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-		else:
-			Bot.send_message(
-				Message.chat.id, 
-				_("Вы ввели не соответствующую формату дату. Повторите попытку.")
-				)
-		return
-	
-	if User.expected_type == "reminder&time":
-		FreeID = User.get_property("EventID")
-		SaveMessageID(User, Message.id, ["MessageNotificationsChange", "TextUserreminder&time" ])
-		User.set_temp_property("ReminderFormat", "OnceDay")
-		Modificated_message = Message.text.replace(":", "").replace(" ", "")
-		Reminder_piece = Message.text.split(" ")[0].lstrip("0")
-		if not Reminder_piece: 
-			SendErrorInput(Bot = Bot, User = User, Message = Message, expected_type = "reminder&time")
-			return
-		Time_piece = Message.text.split(" ")[-1]
-		
-		try:
-			if User.has_property("Name"): Name = User.get_property("Name")
-			else: 
-				Name = EventsData(User).property_event("Name", FreeID)
-
-			if User.has_property("Date"): remains = LimitationOnceReminders(User.get_property("Date"))
-			else: remains = LimitationOnceReminders(EventsData(User).property_event("Date", FreeID))
-
-			Days_Reminder_piece = Additional.FormatDays(int(Reminder_piece), Settings["language"])
-			Days_Remains = Additional.FormatDays(remains, Settings["language"])
-
-			if Modificated_message.isdigit() and int(Reminder_piece) >= 1 and int(Reminder_piece) <= remains and Time_piece.count(":") == 1:
-				if len(Time_piece) >= 3 and len(Time_piece) <= 5:
-					Time = GetValidTime(Time_piece)
-					
-					if int(Reminder_piece) == remains: 
-						Delta = Replacing_timezone(User)
-						UserTime = CorrectUserTime(Time, Delta)
-
-						if UserTime <= datetime.now(timezone.utc).replace(microsecond=0): 
-							type_mistake = _("Ой-ой, а время напоминания <b>$Time_piece</b> для события <b>$Name</b> прошло...\nК сожалению, я не смогу отправиться в прошлое и предупредить вас 😔").replace("$Name", Name).replace("$Time_piece", Time_piece)
-							SendErrorInput(Bot = Bot, User = User, Message = Message, expected_type = "reminder&time", text = type_mistake)
-							return
-					
-					if not User.has_property("Name"): 
-						Data = {"Reminder": Reminder_piece, "ReminderFormat": "OnceDay", "Time": Time}
-						SetPropertyEvent(User, Data, FreeID)
-
-					else: 
-						User.set_temp_property("ReminderFormat", "OnceDay")
-						User.set_temp_property("Reminder", Reminder_piece)
-						User.set_temp_property("Time", Time)
-						Data = GetDataEvent(User)
-						SetDataEvent(User, Data, FreeID)
-
-					if User.has_property("Oncereminders_button"):
-						if User.get_property("Oncereminders_button") == "start": button = InlineKeyboard.Saving(["notSave", "Save"], _("Спасибо!"))
-						if User.get_property("Oncereminders_button") == "new": button = InlineKeyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "OnceDay")
-						if User.get_property("Oncereminders_button") == "change": button = InlineKeyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "AllReminders")
-
-						DeleteMessageNotification = Bot.send_message(
-							Message.chat.id, 
-							_("✅ Данные сохранены!\n\nМы вам напомним о событии <b>$Name</b> в <b>$Time</b> за <b>$Reminder $Days</b>!").replace("$Name", Name).replace("$Time", Time).replace("$Reminder", Reminder_piece).replace("$Days", Days_Reminder_piece),
-							parse_mode = "HTML",
-							reply_markup = button
-							)
-						SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-
-				else: SendErrorInput(Bot = Bot, User = User, Message = Message, expected_type = "reminder&time")
-			else: 
-				type_mistake = "Ой-ой, а до вашего события <b>$Name</b> осталось всего <b>$remains</b> $Days_Remains...\nК сожалению, я не смогу отправиться в прошлое на <b>$Reminder_piece</b> $Days_Reminder_piece назад и предупредить вас 😔".replace("$Reminder_piece", Reminder_piece).replace("$Name", Name).replace("$remains", str(remains)).replace("$Days_Reminder_piece", Days_Reminder_piece).replace("$Days_Remains", Days_Remains)
-				SendErrorInput(Bot = Bot, User = User, Message = Message, expected_type = "reminder&time", text = type_mistake)
-
-		except ZeroDivisionError:
-			SendErrorInput(Bot = Bot, User = User, Message = Message, expected_type = "reminder&time")
-		return
-	
-	if User.expected_type == "time":
-		button = InlineKeyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "OnceDay")
-		SaveMessageID(User, Message.id, ["MessageNotificationsChange"])
-		TimeModificated = Message.text.replace(":", "").replace(" ", "")
-		if TimeModificated.isdigit() and Message.text.count(":") == 1 and len(Message.text) >= 3 and len(Message.text) <= 5:
-			try:
-				Time = GetValidTime(Message.text)
-				FreeID = User.get_property("EventID")
-
-				if User.has_property("Date"): remains = LimitationOnceReminders(User.get_property("Date"))
-				else: remains = LimitationOnceReminders(EventsData(User).property_event("Date", FreeID))
-
-				if User.has_property("Name"): User.get_property("Name")
-				else: Name = EventsData(User).property_event("Name", FreeID)
-				
-				if remains == 0: 
-					Delta = Replacing_timezone(User)
-					UserTime = CorrectUserTime(Time, Delta)
-
-					if UserTime <= datetime.now(timezone.utc).replace(microsecond=0): 
-						type_mistake = _("Ой-ой, а время напоминания <b>$Time_piece</b> для события <b>$Name</b> прошло...\nК сожалению, я не смогу отправиться в прошлое и предупредить вас 😔").replace("$Name", Name).replace("$Time_piece", Time)
-						SendErrorInput(Bot = Bot, User = User, Message = Message, expected_type = "time", text = type_mistake)
-						return
-
-				if not User.has_property("Name"): 
-					Data = {"Reminder": "0", "ReminderFormat": "OnceDay", "Time": Time}
-					SetPropertyEvent(User, Data, FreeID)
-
-				else: 
-					User.set_temp_property("Reminder", "0")
-					User.set_temp_property("ReminderFormat", "OnceDay")
-					User.set_temp_property("Time", Message.text)
-					Data = GetDataEvent(User)
-					SetDataEvent(User, Data, FreeID)
-
-				Name = EventsData(User).property_event("Name", FreeID)
-
-				if User.has_property("Oncereminders_button"):
-						if User.get_property("Oncereminders_button") == "start": button = InlineKeyboard.Saving(["Save"], _("Спасибо"))
-						if User.get_property("Oncereminders_button") == "new": button = InlineKeyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "OnceDay")
-						if User.get_property("Oncereminders_button") == "change": button = InlineKeyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "AllReminders")
-
-				DeleteMessageNotification = Bot.send_message(
-					Message.chat.id, 
-					_("✅ Данные сохранены!\n\nМы вам напомним о событии <b>$Name</b> в <b>$Time день в день!</b>").replace("$Name", Name).replace("$Time", Time),
-					parse_mode = "HTML",
-					reply_markup = button
-				)
-				SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-			except ZeroDivisionError: SendErrorInput(Bot = Bot, User = User, Message = Message, expected_type = "time")
-		else:
-			SendErrorInput(Bot = Bot, User = User, Message = Message, expected_type = "time")
-		return
-
-AdminPanel.decorators.inline_keyboards(Bot, Manager)
-modes.decorators.inline_keyboards()
-
-TimezonerDecorators(Bot, Manager, InlineKeyboard)
-
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Gender"))
-def InlineButtonsChoiceGender(Call: types.CallbackQuery):
-	"""
-	Задаём пол пользователя.
-	Отправка сообщения пользователю с запросом часового пояса.
-	"""
-
-	User = Manager.auth(Call.from_user)
-	Gender = Call.data.split("_")[-1]
-	User.set_property("Gender", Gender)
-
-	User.set_expected_type("timezone")
-	Call_user = User.get_property("call")
-	if User.has_property("emoji") and User.get_property("emoji"):
-		if User.has_property("Gender") and User.get_property("Gender") == "man": Gender_text = _("Наш мужчина")
-		else: Gender_text = _("Наша женщина")
-	
-		Changename =  Bot.send_message(
-		chat_id = Call.message.chat.id,
-		text = _("Спасибо большое! $gender_text, $name!)").replace("$gender_text", Gender_text).replace("$name", Call_user),
-		parse_mode = "HTML",
-		reply_markup = InlineKeyboard.SendEmoji("🤗")
-	)
-		SaveMessageID(User, Changename.id, ["Changename"])
 	else:
-		Bot.delete_message(Call.message.chat.id, Call.message.id)		
-		Bot.send_message(
-			chat_id = Call.message.chat.id,
+		keyboard = adminpanel.open(user)
+		bot.send_message(user.id, "Панель управления открыта.", reply_markup = keyboard)
+
+@bot.message_handler(commands = ["infa"])
+def infa(message: types.Message):
+
+	user = manager.auth(message.from_user)
+
+	Text = (
+		"@Dnido_bot " + _("предназначен для запоминания событий, отслеживания дней, а также установки различных напоминаний!\n"),
+		_("<b>Здесь вы можете:</b>\n- Отсчитывать дни ДО события"),
+		_("- Отсчитывать дни ПОСЛЕ события"),
+		_("- Ставить напоминания о событии день в день в определенное время"),
+		_("- Ставить напоминание о событии день в день без определенного времени (по умолчанию в 7 утра)"),
+		_("- Ставить напоминание о событии за несколько дней до события в определенное время\n"),
+		_("На каждое событие вы можете изменить тип напоминания в любой момент)\n"),
+		"<b><i>" + _("Пользуйтесь, и не забывайте делиться с друзьями!") + "</i></b>"
+	)
+
+	bot.send_message(user.id, "\n".join(Text), "HTML", reply_markup = InlineKeyboards.delete(_("Ясненько")))
+
+@bot.message_handler(content_types = ["text"])
+def text(message: types.Message):
+
+	user = manager.auth(message.from_user)
+	extended_user = ExtendedUser(user)
+
+	if adminpanel.procedures.text(message): return
+
+	buttons = {
+    "✏️ " + _("Новое событие"): dialogs.ask_name_event,
+    "🛎 " + _("Настройка напоминаний"): dialogs.notifications_options,
+    "📜 " + _("Мои события"): dialogs.my_events,
+    "👄 " + _("Поделиться с друзьями"): dialogs.share_with_friends
+	}
+
+	if message.text in buttons:
+		buttons[message.text](extended_user)
+		return
+
+	match user.expected_type:
+
+		case "call":
+			extended_user.remember_trash_message(message.id, TrashMessagesTypes.acquaintance)
+			user.set_property("call", message.text)
+			user.reset_expected_type()
+			dialogs.greet_by_name(extended_user)
+			dialogs.ask_gender(user)
+
+		case "name":
+			new_event = extended_user.eventer.create_event()
+			new_event.set_name(message.text)
+			dialogs.ask_date_event(user)
+			user.set_expected_type("date")
+		
+		case "date":
+			new_event = extended_user.eventer.temp_event
+
+			try: new_event.set_date(message.text)
+			except AttributeError: 
+				dialogs.incorrect_date(user)
+				return
+			
+			user.reset_expected_type()
+			dialogs.ask_reminder_format(extended_user)
+		
+		case "once_reminder":
+
+			#TO-DO: НАПОМИНАНИЕ ЗА 10 ДНЕЙ, А ОСТАЛОСЬ 5.
+			#TO-DO: НАПОМИНАНИЕ БОЛЬШЕ 365 ДНЕЙ.
+			#TO-DO: НАПОМИНАНИЕ С МИНУСОМ ДНЕЙ.
+			working_event = extended_user.eventer.working_event
+
+			input_reminder_data = message.text.strip().split()
+			count_elements = len(input_reminder_data)
+
+			if count_elements not in (1, 2): 
+				dialogs.error_input(extended_user)
+				return
+			
+			else: 
+				try: reminder_data = working_event.check_input_reminder(input_reminder_data, count_elements)
+				except AttributeError:
+					dialogs.error_input(extended_user)
+					return
+			
+			working_event.set_reminder(reminder_data)
+			if working_event.is_temp: working_event.untemp()
+			user.reset_expected_type()
+
+			dialogs.save_reminder(extended_user, working_event, count_elements)
+
+		case "daily_reminder":
+
+			new_event = extended_user.eventer.temp_event
+
+			input_reminder_data = message.text.strip().split()
+			count_elements = len(input_reminder_data)
+
+			if count_elements != 1: 
+				dialogs.error_input(extended_user)
+				return
+			
+			else: 
+				try: reminder_data = new_event.check_input_reminder(input_reminder_data, 1)
+				except AttributeError:
+					dialogs.error_input(extended_user)
+					return
+			
+			new_event.set_reminder(reminder_data)
+			dialogs.save_counting_event(extended_user, new_event)
+			new_event.untemp()
+	
+TimezonerDecorators(bot, manager)
+ModesDecorators(bot, manager).inline_keyboards()
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "clearning")
+def clearning(call: types.CallbackQuery):
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+
+	extended_user.delete_trash_messages(bot)
+
+	if StatusWorking.change.value == extended_user.status_working: change_reminders(call)
+
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "delete")
+def delete(call: types.CallbackQuery):
+
+	manager.auth(call.from_user)
+	
+	bot.delete_message(call.message.chat.id, call.message.id)
+
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("delete_"))
+def delete_trash_message(call: types.CallbackQuery):
+	user = manager.auth(call.from_user)
+
+	type_trash_message = call.data.removeprefix("delete_")
+
+	ExtendedUser(user).delete_trash_messages(bot, type_trash_message)
+	
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("gender_"))
+def gender(call: types.CallbackQuery):
+
+	user = manager.auth(call.from_user)
+	user.set_property("is_male", bool(int(call.data.split("_")[-1])))
+
+	if user.get_property("emoji"): dialogs.gendered_thanks(user)
+
+	else:
+		bot.delete_message(call.message.chat.id, call.message.id)
+		user.set_expected_type("timezone")		
+		bot.send_message(
+			chat_id = call.message.chat.id,
 			text = _("Спасибо большое!\n\nА теперь нам нужен ваш часовой пояс. Сколько сейчас времени у вас на телефоне? 🕐"),
 			parse_mode = "HTML",
 			reply_markup = TimezonerInlineKeyboards().timezone_first_page()
 		)
 	
-	Bot.answer_callback_query(Call.id)
+	bot.answer_callback_query(call.id)
 
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Format"))
-def InlineButtonsFormatDays(Call: types.CallbackQuery):
-	"""
-	Задаём формат события (Remained/Passed).
-	Отправка сообщения пользователю с видом напоминаний (разовое/отсчитывать дни).
-	"""
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "create_event")
+def create_event(call: types.CallbackQuery):
 
-	User = Manager.auth(Call.from_user)
-	EventID = User.get_property("EventID")
-	Format = Call.data.split("_")[-1]
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user) 
 
-	if isEventExist(User, EventID): 
-		Name = EventsData(User).property_event("Name", EventID)
-		Date = EventsData(User).property_event("Date", EventID)
-		SetPropertyEvent(User, {"Format": Format}, EventID)
+	dialogs.ask_name_event(extended_user, " 😉 \n\n<i>Например: День рождения</i>", button = None)
+
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "count_down_event")
+def counting(call: types.CallbackQuery):
+
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+	new_event = extended_user.eventer.temp_event
+
+	new_event.switching_notifications(True)
+	if new_event.is_date_passed: dialogs.ask_format_counting(extended_user)
 	else: 
-		Name = User.get_property("Name")
-		Date = User.get_property("Date")
-		Data = GetDataEvent(User)
-		SetDataEvent(User, Data, EventID)
+		new_event.set_counter_type(EventTypes.remained)
+		dialogs.ask_time_daily_reminder(extended_user)
+		user.set_expected_type("daily_reminder")
+
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("counter_"))
+def save_counter_type(call: types.CallbackQuery):
+
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+	new_event = extended_user.eventer.temp_event
+
+	counter_type = call.data.split("_")[-1]
+	new_event.set_counter_type(EventTypes(counter_type))
+
+	dialogs.ask_time_daily_reminder(extended_user)
+	user.set_expected_type("daily_reminder")
+
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "one_time_reminder")
+def one_time(call: types.CallbackQuery):
+
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+
+	if extended_user.eventer.temp_event: extended_user.eventer.temp_event.set_counter_type(EventTypes.remained)
+	else: extended_user.eventer.working_event.switching_notifications(False)
+
+	dialogs.ask_time_reminder(extended_user)
+	user.set_expected_type("once_reminder")
+
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "another_day")
+def another_day(call: types.CallbackQuery):
+	"""Отправка сообщения для выбора дня и времени разовых напоминаний."""
 	
-	if Format == "Remained":
-		skinwalker = Additional.Skinwalker(Date)
-		remains = str(Additional.Calculator(skinwalker))
-		days = Additional.FormatDays(remains, Settings["language"])
-		if DataModes(User).type == None: reply_markup = InlineKeyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji", new_user = True)
-		else: reply_markup = InlineKeyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji")
-		DeleteMessageNotification = Bot.send_message(
-			chat_id = Call.message.chat.id,
-			text = _("Данные сохранены!\n\nДо события <b>$Name</b> осталось $remains $days!\n\nБудем ждать его вместе с <u>ежедневными напоминаниями!</u> 🛎").replace("$Name", Name).replace("$remains", remains).replace("$days" ,days),
-			reply_markup = reply_markup,
-			parse_mode = "HTML"
-		)
-		SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
 
-	if Format == "Passed":
-
-		remains = str(abs(Additional.Calculator(Date)))
-		days = Additional.FormatDays(remains, Settings["language"])
-		DeleteMessageNotification = Bot.send_message(
-			chat_id = Call.message.chat.id,
-			text = _("Данные сохранены!\n\nВаше событие <b>$Name</b> произошло $remains $days назад!").replace("$Name", Name).replace("$remains", remains).replace("$days", days),
-			parse_mode = "HTML"
-		)
-		SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
+	dialogs.ask_day_and_time_reminder(extended_user)
+	user.set_expected_type("once_reminder")
 	
-	Bot.answer_callback_query(Call.id)
+	bot.answer_callback_query(call.id)
 
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("AnotherDay"))
-def InlineButtonAnotherDay(Call: types.CallbackQuery):
-	"""
-	Отправка сообщения для выбора дня и времени разовых напоминаний.
-	"""
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "fix_reminder_date")
+def fix_reminder_date(call: types.CallbackQuery):
+	"""Отправка сообщения при нажатии на спасибо после сохранения напоминания для события."""
+
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+
+	masterbot.safely_delete_messages(call.message.chat.id, call.message.id)
+	dialogs.ask_day_and_time_reminder(extended_user)
+	user.set_expected_type("once_reminder")
+
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "fix_reminder")
+def fix_reminder(call: types.CallbackQuery):
+	"""Отправка сообщения при нажатии на изменить при сохранении новоиспечённого события."""
+
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+	extended_user.switching_status_working(StatusWorking.hot_fix)
+
+	dialogs.ask_reminder_format_again(extended_user)
+
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "thanks")
+def thanks(call: types.CallbackQuery):
+	"""Отправка сообщения при нажатии на спасибо после сохранения напоминания для события."""
 	
-	User = Manager.auth(Call.from_user)
-	if User.has_property("Name"): Name = User.get_property("Name")
-	else:
-		FreeID = User.get_property("EventID")
-		Name = EventsData(User).property_event("Name", FreeID)
-	DeleteMessageNotification = Bot.send_message(
-		Call.message.chat.id,
-		_("Укажите, за сколько дней и в какое время вам напомнить о событии <b>$Name</b>? 🔊\n\n<i>Пример: 10 18:30 (означает за 10 дней и в 18:30)</i>").replace("$Name", Name),
-		parse_mode = "HTML"
-	)
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
 
-	User.set_expected_type("reminder&time")
-	SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-	Bot.answer_callback_query(Call.id)
-
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Save"))
-def InlineButtonsSave(Call: types.CallbackQuery):
-	"""
-	Сохранение или исправление событий (разовое за n-ное количество дней до события), а также постановка реакции на сообщение (разовое за день до события).
-	Удаление временных данных в пользовательском файле.
-	"""
-
-	User = Manager.auth(Call.from_user)
-	Saving = Call.data.split("_")[1]
+	if extended_user.status_working == StatusWorking.change.value: 
+		extended_user.delete_trash_messages(bot, TrashMessagesTypes.change_reminders.value)
+		change_reminders(call)
+	else: dialogs.message_with_button_emoji(extended_user)
 	
-	if Saving.startswith("yes"):
-		if Saving == "yes":
-			SendMessagewithEmoji(Bot, Call, InlineKeyboard)
-		
-		else:
-			Reaction = Saving.replace("yes","")
-			PutReaction(Bot, Call, Reaction)
+	bot.answer_callback_query(call.id)
 
-		User.clear_temp_properties()
-		User.set_expected_type(None)
-	else: 
-		# ? Нужно ли при нажатии на исправить удалять что-либо, и назначать User.set_expected_type(None) ???????
-		Delete = Call.data.split("_")[2]
-		Bot.delete_message(Call.message.chat.id, Call.message.id)
-		DeleteMessageID(User, Call, telemaster, "TextUserreminder&time")
-		if Delete:
-			DeleteMessageID(User, Call, telemaster, Delete)
-			User.set_expected_type(None)
-
-	Bot.answer_callback_query(Call.id)
-
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("create_event"))
-def InlineButtonCreateEvent(Call: types.CallbackQuery):
-	"""Отправка сообщения об ожидании ввода названия события."""
-
-	User = Manager.auth(Call.from_user)
-	text = _("Введите, пожалуйста, название события, которое вы так ждёте! 😉 \n\n<i>Например: День рождения</i>")
-	MessageWaitingName(Bot, Call.message, InlineKeyboard, User, text, isbutton = False)
-
-	Bot.answer_callback_query(Call.id)
-
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("remove_event"))
-def InlineButtonRemoveEvent(Call: types.CallbackQuery):
-	User = Manager.auth(Call.from_user)
-
-	EventID = Call.data.split("_")[-1]
-	DeleteEvent(User, EventID)
-	DeleteMessageID(User, Call, telemaster, "MessagesMyEvents")
-
-	if User.get_property("events"): CoreEvents(User, Bot, Settings).my_events()
-
-	Bot.answer_callback_query(Call.id)
-
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Delete_reminder"))
-def ProcessDeleteReminder(Call: types.CallbackQuery):
-	User = Manager.auth(Call.from_user)
-
-	CountReminder = 0
-	somedict: dict = User.get_property("events").copy()
-
-	if User.get_property("events"):
-
-		for EventID in somedict.keys():
-			if User.get_property("events")[EventID]["ReminderFormat"] != "WithoutReminders":
-				CountReminder += 1
-		
-		if CountReminder < 1:
-			DeleteMessageNotification = Bot.send_message(
-				Call.message.chat.id, 
-				_("У вас все напоминания уже отключены!")
-				)
-			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsDeactivate"])
-		else:
-			DeleteMessageNotification = Bot.send_message(
-						Call.message.chat.id,
-						_("ВАШИ НАПОМИНАНИЯ:"))
-			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsDeactivate"])
-
-			number_event = 1
-			for EventID in somedict.keys():
-				Name = EventsData(User).property_event("Name", EventID)
-			
-				if somedict[EventID]["ReminderFormat"] == "EveryDay":
-					DeleteMessageNotification = Bot.send_message(
-					Call.message.chat.id,
-					f"{number_event}) " + _("<b>%s</b>\nУстановлены ежедневные напоминания!") % Name,
-					reply_markup = InlineKeyboard.ChoiceEventToRemoveReminder(EventID),
-					parse_mode = "HTML")
-					SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsDeactivate"])
-					number_event += 1 
-					
-				if somedict[EventID]["ReminderFormat"] == "OnceDay":
-					Reminder = EventsData(User).property_event("Reminder", EventID)
-					Time = EventsData(User).property_event("Time", EventID)
-					days = Additional.FormatDays(int(Reminder), Settings["language"])
-					if Reminder == "0": text = f"{number_event}) " + _("<b>$Name</b>\nНапоминание установлено на $Time день в день!").replace("$Name", Name).replace("$Time", Time)
-					else: text = f"{number_event}) " + _("<b>$Name</b>\nНапоминание установлено на $Time за $Reminder $days!").replace("$Name", Name).replace("$Time", Time).replace("$Reminder", Reminder).replace("$days", days)
-					DeleteMessageNotification = Bot.send_message(
-						Call.message.chat.id,
-						text = text,
-						reply_markup = InlineKeyboard.ChoiceEventToRemoveReminder(EventID),
-						parse_mode = "HTML")
-					SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsDeactivate"])
-					number_event += 1 
-				sleep(0.1)			
-	else:
-		DeleteMessageNotification = Bot.send_message(
-				Call.message.chat.id, 
-				_("Чтобы отключить напоминания, сначала создайте событие!"),
-				reply_markup = InlineKeyboard.AddNewEvent()
-				)
-		SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsDeactivate"])
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("emoji_"))
+def put_emoji(call: types.CallbackQuery):
+	"""Отправка реакции на сообщение."""
 	
-	DeleteMessageNotification = Bot.send_message(
-		Call.message.chat.id,
-		_("<b>Для выхода</b> в предыдущее меню нажмите \"Назад\":"),
-		reply_markup = InlineKeyboard.SteakActions(name_button = _("🔙 Назад"), delete = "MessageNotificationsDeactivate"),
-		parse_mode = "HTML"
-		)
+	manager.auth(call.from_user)
+	emoji = call.data.split("_")[1]
+
+	bot.edit_message_reply_markup(call.message.chat.id, call.message.id, reply_markup = None)
+	bot.set_message_reaction(call.message.chat.id, call.message.id, [ReactionTypeEmoji(emoji)])
 	
-	SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsDeactivate"])
+	bot.answer_callback_query(call.id)
 
-	Bot.answer_callback_query(Call.id)
-
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("remove_reminder"))
-def InlineButtonRemoveReminder(Call: types.CallbackQuery):
-	User = Manager.auth(Call.from_user)
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("without_reminders"))
+def without_reminders(call: types.CallbackQuery):
+	"""Подтверждение отключения всех напоминаний для события."""
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
 	
-	EventID = Call.data.split("_")[-1]
-	Data = {"Reminder": None, "ReminderFormat": "WithoutReminders", "Time": None}
-	SetPropertyEvent(User, Data, EventID)
+	dialogs.ask_change_reminders(extended_user, EventTypes.no_nofifications)
 
-	Bot.delete_message(Call.message.chat.id, Call.message.id)
+	bot.answer_callback_query(call.id)
 
-	Delete = 0
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("every_day_reminder"))
+def every_day_reminder(call: types.CallbackQuery):
+	"""Подтверждение включения ежедневных напоминаний."""
 
-	for EventID in User.get_property("events"):
-		if User.get_property("events")[EventID]["ReminderFormat"] != "WithoutReminders": 
-			Delete += 1
-
-	if Delete == 0:
-		DeleteMessageID(User, Call, telemaster, "MessageNotificationsDeactivate")
-
-	DeleteMessageID(User, Call, telemaster, "MessageNotificationsDeactivate")
-	ProcessDeleteReminder(Call = Call)
-
-	Bot.answer_callback_query(Call.id)
-
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Change_reminder"))
-def ProcessChange_reminders(Call: types.CallbackQuery):
-	User = Manager.auth(Call.from_user)
-	CountRemained = 0
-	somedict: dict = User.get_property("events").copy()
-
-	if User.get_property("events"):
-		for EventID in somedict.keys():
-			if somedict[EventID]["Format"] == "Remained":
-				CountRemained += 1 
-		if CountRemained >= 1:
-			DeleteMessageNotification = Bot.send_message(
-				Call.message.chat.id, 
-				_("ВАШИ СОБЫТИЯ:"))
-			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-			
-			number_event = 1
-			for EventID in somedict.keys():
-				Name = EventsData(User).property_event("Name", EventID)
-				
-				if somedict[EventID]["ReminderFormat"] == "EveryDay":
-					DeleteMessageNotification = Bot.send_message(
-					Call.message.chat.id,
-					f"{number_event}) " + _("<b>%s</b>\nУстановлены ежедневные напоминания!") % Name,
-					reply_markup = InlineKeyboard.ChoiceEventToChangeReminder(EventID),
-					parse_mode = "HTML")
-					SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
 	
-				if somedict[EventID]["ReminderFormat"] == "OnceDay":
+	dialogs.ask_change_reminders(extended_user, EventTypes.counting)
 
-					Reminder = EventsData(User).property_event("Reminder", EventID)
-					Time = EventsData(User).property_event("Time", EventID)
-					days = Additional.FormatDays(int(Reminder), Settings["language"])
-					if Reminder == "0": text = f"{number_event}) " + _("<b>$Name</b>\nНапоминание установлено на $Time день в день!").replace("$Name", Name).replace("$Time", Time)
-					else: text = f"{number_event}) " +  _("<b>$Name</b>\nНапоминание установлено на $Time за $Reminder $days!").replace("$Name", Name).replace("$Time", Time).replace("$Reminder", Reminder).replace("$days", days)
-					DeleteMessageNotification = Bot.send_message(
-						Call.message.chat.id,
-						text = text,
-						reply_markup = InlineKeyboard.ChoiceEventToChangeReminder(EventID),
-						parse_mode = "HTML")
-					SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-	
-				if somedict[EventID]["ReminderFormat"] == "WithoutReminders" and somedict[EventID]["Format"] == "Remained":
-					DeleteMessageNotification = Bot.send_message(
-						Call.message.chat.id,
-						f"{number_event}) " + _("<b>%s</b>\nНапоминание отключено!") % (Name),
-						reply_markup = InlineKeyboard.ChoiceEventToChangeReminder(EventID),
-						parse_mode = "HTML")
-					SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-				number_event += 1 		
-				sleep(0.1)
-		else:
-			DeleteMessageNotification = Bot.send_message(
-					Call.message.chat.id, 
-					text = _("Чтобы изменить напоминание, сначала создайте событие!"),
-					reply_markup = InlineKeyboard.AddNewEvent()
-					)
-			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-		
-	else:
-		DeleteMessageNotification = Bot.send_message(
-					Call.message.chat.id, 
-					text = _("Чтобы изменить напоминание, сначала создайте событие!"),
-					reply_markup = InlineKeyboard.AddNewEvent()
-					)
-		SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-		
+	bot.answer_callback_query(call.id)
 
-	DeleteMessageNotification = Bot.send_message(
-		Call.message.chat.id,
-		_("<b>Для выхода</b> в предыдущее меню нажмите \"Назад\":"),
-		reply_markup = InlineKeyboard.SteakActions(name_button = _("🔙 Назад"), delete = "MessageNotificationsChange"),
-		parse_mode = "HTML"
-		)
-	SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-		
-	Bot.answer_callback_query(Call.id)
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("random_time_daily_reminder"))
+def random_time_daily_reminder(call: types.CallbackQuery):
+	"""Выбор стандартного времени для рассылки."""
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+	new_event = extended_user.eventer.temp_event
 
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("choice_event"))
-def InlineButtonChoiceEventToAddReminder(Call: types.CallbackQuery):
-	User = Manager.auth(Call.from_user)
+	dialogs.save_counting_event(extended_user, new_event)
+	new_event.untemp()
 
-	EventID = Call.data.split("_")[-1]
-	User.set_property("EventID", EventID)
-	Name = EventsData(User).property_event("Name", EventID)
-	DeleteMessageNotification = Bot.send_message(
-		Call.message.chat.id,
-		_("Выберите тип напоминания для события <b>%s</b>:") % Name,
-		reply_markup = InlineKeyboard.ChoiceFormatReminderChange(),
-		parse_mode = "HTML"
-	)
-	SaveMessageID(User, DeleteMessageNotification.id, ["Leavechangenotifications", "MessageNotificationsChange"])
-	
-	Bot.answer_callback_query(Call.id)
+	bot.answer_callback_query(call.id)
 
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("settings_for"))
-def InlineButtonSettingsforReminder(Call: types.CallbackQuery):
-	User = Manager.auth(Call.from_user)
-	DeleteMessageNotification = Bot.send_message(
-		Call.message.chat.id,
-		_("Выберите тип напоминания:"),
-		reply_markup = InlineKeyboard.ChoiceFormatReminderNew()
-		)
-	SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-	Bot.answer_callback_query(Call.id)
-	
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("every_day_reminder"))
-def ProcessEveryDayReminders(Call: types.CallbackQuery):
-	User = Manager.auth(Call.from_user)
-	subtype = Call.data.split("_")[-1]
-	User.set_temp_property("ReminderFormat", "EveryDay")
-	EventID = User.get_property("EventID")
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("confirm_"))
+def confirm(call: types.CallbackQuery):
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
 
-	if isEventExist(User, EventID): Name = EventsData(User).property_event("Name", EventID)
-	else: Name = User.get_property("Name")
+	type_reminders = call.data.split("_")[1] + "_" + call.data.split("_")[2]
+	working_event = extended_user.eventer.working_event
 
-	if subtype == "start": 
-		User.set_property("Oncereminders_button", subtype)
-		remains = Additional.Calculator(User.get_property("Date"))
-		if remains < 0: 
-			DeleteMessageNotification = Bot.send_message(
-				Call.message.chat.id,
-				text = _("Укажите, какой формат отсчёта вам показывать?"),
-				reply_markup = InlineKeyboard.ChoiceFormat()
-			)
-			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
+	if type_reminders == EventTypes.no_nofifications.value: 
+		dialogs.turn_off_reminders(extended_user)
+		working_event.switching_notifications(False)
+		working_event.set_reminder(None)
 
-		elif remains == 0: 
-			if DataModes(User).type == None: reply_markup = InlineKeyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji", new_user = True)
-			else: reply_markup = InlineKeyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji")
-			DeleteMessageNotification = Bot.send_message(
-				chat_id = Call.message.chat.id,
-				text = _("Данные сохранены!\n\nВаше событие $Name сегодня!!! 😊".replace("$Name", Name)),
-				reply_markup = reply_markup,
-				parse_mode = "HTML"
-			)
-			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-			Data = GetDataEvent(User)
-			SetDataEvent(User, Data, EventID)
+	if type_reminders == EventTypes.counting.value: 
 
-		else:
-			if DataModes(User).type == None: reply_markup = InlineKeyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji", new_user = True)
-			else: reply_markup = InlineKeyboard.SettingsNotifications(EventID, Send = "SendMessagewithEmoji")
-			days = Additional.FormatDays(remains, Settings["language"])
-			DeleteMessageNotification = Bot.send_message(
-				chat_id = Call.message.chat.id,
-				text = _("Данные сохранены!\n\nДо события <b>$Name</b> осталось $remains $days!\n\nБудем ждать его вместе с <u>ежедневными напоминаниями!</u> 🛎").replace("$Name", Name).replace("$remains", str(remains)).replace("$days", days),
-				reply_markup = reply_markup,
-				parse_mode = "HTML"
-			)
-			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-			Data = GetDataEvent(User)
-			SetDataEvent(User, Data, EventID)
+		dialogs.turn_on_every_day_reminders(extended_user)
+		working_event.switching_notifications(True)
+		working_event.set_reminder(None)
 
-	if subtype == "change":
-		Name = EventsData(User).property_event("Name", EventID)
-		DeleteMessageNotification = Bot.send_message(
-			Call.message.chat.id,
-			_("Вы хотите включить ежедневные напоминания для события <b>$Name</b>?").replace("$Name", Name),
-			parse_mode = "HTML",
-			reply_markup = InlineKeyboard.Confirmation("EveryNotifications", subtype)
-			)
-		SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
+	bot.answer_callback_query(call.id)
 
-	Bot.answer_callback_query(Call.id)
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("remove_event_"))
+def remove_event(call: types.CallbackQuery):
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
 
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("once_reminder"))
-def ProcessOnceDayReminders(Call: types.CallbackQuery):
-	User = Manager.auth(Call.from_user)
-	subtype = Call.data.split("_")[-1]
-	EventID = User.get_property("EventID")
+	extended_user.eventer.remove_event(int(call.data.split("_")[-1]))
+	dialogs.my_events(extended_user, True)
 
-	if isEventExist(User, EventID) and EventsData(User).property_event("Format", EventID) == "Passed":
-		DeleteMessageNotification = SendChangeFormat(Bot, Call, InlineKeyboard)
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "disable_reminders")
+def disable_reminders(call: types.CallbackQuery):
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+
+	if not extended_user.eventer.events: 
+		dialogs.no_events(extended_user, TrashMessagesTypes.disable_reminders)
 		return
 
-	DeleteMessageNotification = Bot.send_message(
-			Call.message.chat.id,
-			_("В день события мы вам пришлём напоминание! 🛎 \n\nВ какое время вы бы хотели получить его?\n\n<i>Пример: 18:30</i>"),
-			reply_markup = InlineKeyboard.ChoiceAnotherDay(),
-			parse_mode = "HTML"
-			)
-	User.set_expected_type("time")
-	User.set_property("Oncereminders_button", subtype)
-	SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
+	if extended_user.eventer.events_with_reminders: 
+		dialogs.your_reminders(extended_user)
+
+	else: dialogs.not_events_with_reminders(extended_user)
+
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("disable_reminder_"))
+def disable_reminder(call: types.CallbackQuery):
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+	extended_user.switching_working_event_id(int(call.data.split("_")[-1]))
+
+	working_event = extended_user.eventer.working_event
+	working_event.switching_notifications(False)
+	working_event.set_reminder(None)
 	
-	Bot.answer_callback_query(Call.id)
+	bot.delete_message(call.message.chat.id, call.message.id)
 
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("without_reminders"))
-def ProcessWithoutReminders(Call: types.CallbackQuery):
-	User = Manager.auth(Call.from_user)
-	subtype = Call.data.split("_")[-1]
-	EventID = User.get_property("EventID")
-	Name = EventsData(User).property_event("Name", EventID)
-	if subtype == "change": text = _("Хотите отключить все напоминания для события <b>$Name</b>? ").replace("$Name", Name)
-	else: text = _("Хотите отключить все напоминания для события <b>$Name</b>?").replace("$Name", Name)
-	DeleteMessageNotification = Bot.send_message(
-		Call.message.chat.id,
-		text,
-		reply_markup = InlineKeyboard.Confirmation("WithoutNotifications", subtype),
-		parse_mode = "HTML"
-		)
-	SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
+	extended_user.delete_trash_messages(bot, TrashMessagesTypes.disable_reminders.value)
 
-	Bot.answer_callback_query(Call.id)
+	disable_reminders(call)
 
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Confirmation"))
-def ProcessConfirmation(Call: types.CallbackQuery):
-	User = Manager.auth(Call.from_user)
-	notification_type = Call.data.split("_")[1]
-	subtype = Call.data.split("_")[2]
-	EventID = User.get_property("EventID")
-	Name = EventsData(User).property_event("Name", EventID)
+	bot.answer_callback_query(call.id)
 
-	if notification_type == "WithoutNotifications":
-		if subtype == "change": button = InlineKeyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "AllReminders")
-		else: button = InlineKeyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "WithoutReminders")
+@bot.callback_query_handler(func = lambda Callback: Callback.data == "change_reminders")
+def change_reminders(call: types.CallbackQuery):
 
-		Data = {"ReminderFormat": "WithoutReminders", "Reminder": None, "Time": None}
-		DeleteMessageNotification = Bot.send_message(
-			Call.message.chat.id,
-			_("Для события <b>%s</b> все напоминания отключены! 🔕\n\nНо не переживайте! День в день мы вас все равно о нём уведомим!") % Name,
-			reply_markup = button,
-			parse_mode = "HTML"
-		)
-		SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+	eventer = extended_user.eventer
 
-	if notification_type == "EveryNotifications":
-		Data = {"ReminderFormat": "EveryDay", "Reminder": None, "Time": None}
-		DeleteMessageNotification = Bot.send_message(
-		Call.message.chat.id,
-			_("Для события <b>%s</b> ежедневные напоминания включены!") % Name,
-			reply_markup = InlineKeyboard.SteakActions(name_button = _("Спасибо!"), delete = "MessageNotificationsChange", update = "AllReminders"),
-			parse_mode = "HTML"
-		)
-		SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
+	if eventer.events: dialogs.your_events(extended_user)
+	else: dialogs.no_events(extended_user, TrashMessagesTypes.change_reminders)
+
+	dialogs.exit_with_delete(extended_user, TrashMessagesTypes.change_reminders)
 		
-	SetPropertyEvent(User, Data, EventID)
+	bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("change_reminder_"))
+def change_reminder(call: types.CallbackQuery):
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
+	extended_user.switching_working_event_id(int(call.data.split("_")[-1]))
+	extended_user.switching_status_working(StatusWorking.change)
+
+	dialogs.choice_reminder(extended_user)
 	
-	Bot.answer_callback_query(Call.id)
+	bot.answer_callback_query(call.id)
 
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Change_name"))
-def ProcessChangeName(Call: types.CallbackQuery):
-	User = Manager.auth(Call.from_user)
-	User.set_property("emoji", True)
-	WaitingName = Bot.send_message(
-		Call.message.chat.id,
-		_("Напишите свое новое имя!"),
-		reply_markup = InlineKeyboard.SteakActions(name_button =_("Спасибо, ещё не придумал)"), delete = "WaitingName")
-		)
-	User.set_expected_type("call")
-	SaveMessageID(User, WaitingName.id, ["WaitingName", "Changename"])
+@bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("standart_time_every_reminders"))
+def standart_time_every_reminders(call: types.CallbackQuery):
+	user = manager.auth(call.from_user)
+	extended_user = ExtendedUser(user)
 
-	Bot.answer_callback_query(Call.id)
+	# extended_user.switching_working_event_id(int(call.data.split("_")[-1]))
+	# extended_user.switching_status_working(StatusWorking.change)
+
+	# dialogs.choice_reminder(extended_user)
 	
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Steak"))
-def ProcessSteakActions(Call: types.CallbackQuery):
-	User = Manager.auth(Call.from_user)
-	User.set_expected_type(None)
-	Delete = Call.data.split("_")[1]
-	Update = Call.data.split("_")[2]
-	Send = Call.data.split("_")[3]
-	if not Send:
-		Bot.delete_message(Call.message.chat.id, Call.message.id)
-	if Delete: 
-		DeleteMessageID(User, Call, telemaster, Delete)
-	if Update:
-		EventID = User.get_property("EventID")
-		Name = EventsData(User).property_event("Name", EventID)
-		if Update == "WithoutReminders": 
-			remains = Additional.Calculator(EventsData(User).property_event("Date", EventID))
-			if remains < 0: 
-				skinwalker = str(Additional.Skinwalker(EventsData(User).property_event("Date", EventID)))
-				remains = str(Additional.Calculator(skinwalker))
-				
-			days = Additional.FormatDays(remains, language = "ru")
-			DeleteMessageNotification = Bot.send_message(
-				chat_id = Call.message.chat.id,
-				text = _("Данные сохранены!\n\nДо события <b>$Name</b> осталось $remains $days!\n\nНапоминание о нем придет только <u>день в день</u>! 🛎").replace("$Name", Name).replace("$remains", remains).replace("$days", days),
-				reply_markup = InlineKeyboard.SettingsNotifications(EventID),
-				parse_mode = "HTML"
-			)
-			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
+	bot.answer_callback_query(call.id)
 
-		if Update == "OnceDay": 
-			Reminder = EventsData(User).property_event("Reminder", EventID)
-			Time = EventsData(User).property_event("Time", EventID)
-			days = Additional.FormatDays(Time, language = "ru")
-
-			if Reminder == "0": text = "Итак, подытожим!\n\nВаше событие: <b>$Name</b>\n\nНапоминание о нём придёт <b>в $Time день в день!</b> 🛎".replace("$Name", Name).replace("$Time", Time)
-			else: text = "Итак, подытожим!\n\nВаше событие: <b>$Name</b>\n\nНапоминание о нём придёт <b>в 18:30 за $Reminder $days</b>! 🛎".replace("$Name", Name).replace("$Time", Time).replace("$Reminder", Reminder).replace("$days", days)
-			DeleteMessageNotification = Bot.send_message(
-
-				chat_id = Call.message.chat.id,
-				text = text,
-				reply_markup = InlineKeyboard.SettingsNotifications(EventID),
-				parse_mode = "HTML"
-			)
-			SaveMessageID(User, DeleteMessageNotification.id, ["MessageNotificationsChange"])
-
-		if Update == "AllReminders":
-			ProcessChange_reminders(Call)
-	if Send: SendMessagewithEmoji(Bot, Call, InlineKeyboard)
-	Bot.answer_callback_query(Call.id)
-
-@Bot.callback_query_handler(func = lambda Callback: Callback.data.startswith("Emoji"))
-def ProcessWithEmoji(Call: types.CallbackQuery):
-	User = Manager.auth(Call.from_user)	
-	Reaction = Call.data.split("_")[1]
-	Type = Call.data.split("_")[2]
-	if Reaction == "🤗":
-		PutReaction(Bot, Call, Reaction)
-		DeleteMessageID(User, Call, telemaster, "Changename")
-	
-	if Reaction == "❤️" and User.has_property("Oncereminders_button") and User.get_property("Oncereminders_button") != "change": PutReaction(Bot, Call, Reaction)
-	if Type == "events": DeleteMessageID(User, Call, Bot, "MessagesMyEvents")
-
-			
-	Bot.answer_callback_query(Call.id)
-
-@Bot.message_handler(content_types = ["audio", "document", "video"])
-def File(Message: types.Message):
-	User = Manager.auth(Message.from_user)
-	AdminPanel.procedures.files(Bot, User, Message)
-
-AdminPanel.decorators.photo(Bot, Manager)
-
-Bot.infinity_polling()
+bot.infinity_polling()				

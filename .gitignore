@@ -1,10 +1,25 @@
-.venv
-__pycache__
+# Виртуальное окружение
+.venv/
 
-Data
-LOGING.log
+# Переменные окружения
+.env
+!.env.example
+
+# IDE и настройки редактора
+.vscode/
+
+# Логи
+*.log
+
+# Кэш
+__pycache__/
 .telecache.json
 
-QR-code.jpg
-QR-code(en).jpg
-start.jpg
+# Локальные файлы 
+Data/Users/*
+
+Resources/Media/*
+!Resources/Media/.gitkeep
+
+Resources/Modes/*
+!Resources/Modes/.gitkeep
