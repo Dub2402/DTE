@@ -1,13 +1,14 @@
 from Source.Modules.Timezoner import TimezonerInlineKeyboards, TimezonerDecorators
-from Source.Core.Enums import TrashMessagesTypes, StatusWorking
 from Source.Modules.Modes.Decorators import Decorators as ModesDecorators
+from Source.Core.Enums import TrashMessagesTypes, StatusWorking
+from Source.Core.LoggerConfig import ConfigurateLogger
 from Source.Core.ExtendedUser import ExtendedUser
+from Source.Core.LaunchGuard import LaunchGuard
 from Source.Modules.Eventer import EventTypes
 from Source.TeleBotAdminPanel import Panel
 from Source.UI.Dialogs import UserDialogs
-from Source.Core.Mailer import Mailer
 from Source.UI import InlineKeyboards
-from Source.Core import MediaChecker
+from Source.Core.Mailer import Mailer
 
 from dublib.TelebotUtils import TeleCache, TeleMaster, UsersManager
 from dublib.Engine.Configurator import Config
@@ -15,7 +16,6 @@ from dublib.Engine.GetText import GetText
 from dublib.Methods.Data import Zerotify
 from dublib.Methods.System import Clear
 
-import logging
 import os
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -32,12 +32,13 @@ settings = Config("Settings.json")
 settings.load()
 load_dotenv()
 
-MediaChecker.check_media(settings["language"])
+ConfigurateLogger()
+LaunchGuard().check_all(settings["language"])
 
-bot = TeleBot(os.environ.get("token"))
+bot = TeleBot(os.environ.get("TOKEN"))
 masterbot = TeleMaster(bot)
 manager = UsersManager("Data/Users")
-adminpanel = Panel(bot, manager, os.environ.get("password"))
+adminpanel = Panel(bot, manager, os.environ.get("PASSWORD"))
 
 scheduler = BackgroundScheduler()
 scheduler.remove_all_jobs()
@@ -47,26 +48,12 @@ scheduler.start()
 
 cacher = TeleCache()
 cacher.set_bot(bot)
-cacher.set_chat_id(os.environ.get("chat_id"))
+cacher.set_chat_id(os.environ.get("CHAT_ID"))
 
 dialogs = UserDialogs(bot, cacher, settings["language"])
 
 GetText.initialize("DTE", settings["language"], settings["locale_dir"])
 _ = GetText.gettext
-
-#---> Настройка логгирования.
-#==========================================================================================#
-
-logging.basicConfig(
-	level = logging.INFO,
-	encoding = "utf-8",
-	filename = "logging.log",
-	filemode = "w",
-	format = '%(asctime)s - %(levelname)s - %(message)s',
-	datefmt = '%Y-%m-%d %H:%M:%S'
-)
-logging.getLogger("pyTelegramBotAPI").setLevel(logging.WARNING)
-logging.getLogger("requests").setLevel(logging.WARNING)
 
 #---> Взаимодействие с ботом.
 #==========================================================================================#
