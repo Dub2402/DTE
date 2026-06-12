@@ -7,8 +7,8 @@ from Source.Core.LaunchGuard import LaunchGuard
 from Source.Modules.Eventer import EventTypes
 from Source.TeleBotAdminPanel import Panel
 from Source.UI.Dialogs import UserDialogs
-from Source.UI import InlineKeyboards
 from Source.Core.Mailer import Mailer
+from Source.UI import InlineKeyboards
 
 from dublib.TelebotUtils import TeleCache, TeleMaster, UsersManager
 from dublib.Engine.Configurator import Config
@@ -33,7 +33,7 @@ settings.load()
 load_dotenv()
 
 ConfigurateLogger()
-LaunchGuard().check_all(settings["language"])
+LaunchGuard(settings["language"]).check_readiness()
 
 bot = TeleBot(os.environ.get("TOKEN"))
 masterbot = TeleMaster(bot)
@@ -48,7 +48,7 @@ scheduler.start()
 
 cacher = TeleCache()
 cacher.set_bot(bot)
-cacher.set_chat_id(os.environ.get("CHAT_ID"))
+cacher.set_chat_id(int(os.environ.get("CHAT_ID")))
 
 dialogs = UserDialogs(bot, cacher, settings["language"])
 
