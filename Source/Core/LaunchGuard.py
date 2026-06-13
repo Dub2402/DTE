@@ -3,14 +3,8 @@ from setup_project import ExcelTemplater
 
 from pathlib import Path
 import logging
-import enum
 import sys
 import os
-
-class EnvironmentVariables(enum.Enum):
-    TOKEN = "TOKEN"
-    PASSWORD = "PASSWORD"
-    CHAT_ID = "CHAT_ID"
 
 class LaunchGuard:
     """Проверяет наличие всех приватных данных, при отсутствии которых могут возникать критические ошибки или некорректная работа функций при работе бота."""
@@ -47,18 +41,19 @@ class LaunchGuard:
         :return: Статус: необходимо ли экстренное завершение процесса.
         :rtype: bool
         """
-
         is_critical_failed = False
 
-        for environment_variable in EnvironmentVariables:
+        functions = {
+            "TOKEN": self.__valid_token,
+            "PASSWORD": self.__valid_password,
+            "CHAT_ID": self.__valid_chat_id,
+        }
 
-            if os.getenv(environment_variable.value):
-                if environment_variable == EnvironmentVariables.TOKEN:
-                    is_critical_failed = not self.__valid_token(os.getenv(environment_variable.value))
-                if environment_variable == EnvironmentVariables.PASSWORD:
-                    is_critical_failed = not self.__valid_password(os.getenv(environment_variable.value))
-                if environment_variable == EnvironmentVariables.CHAT_ID:
-                    is_critical_failed = not self.__valid_password(os.getenv(environment_variable.value))
+        for environment_variable in functions.keys():
+            environment_value = os.getenv(environment_variable)
+
+            if environment_value:
+                is_critical_failed |= not functions[environment_variable](environment_value)
             else:
                 logging.critical(f"В .env отсутствует переменная '{environment_variable}'")
                 is_critical_failed = True
@@ -83,7 +78,7 @@ class LaunchGuard:
             return False
         
         if len(token.split(':')) != 2: 
-            logging.critical("Токен должен содержать 2 части разделённые двоеточием.")
+            logging.critical("Токен должен содержать две части, разделённые двоеточием.")
             return False
         
         return True
@@ -97,8 +92,10 @@ class LaunchGuard:
         :rtype: bool
         """
 
-        if len(password.strip()) >= 1: return True
-        else: return False
+        if len(password.strip()) < 1: 
+            logging.critical("Пароль должен содержать как минимум один символ.")
+            return False
+        else: return True
 
     def __valid_chat_id(self, chat_id: str) -> bool:
         """Проверяет валидность id чата.
@@ -109,8 +106,10 @@ class LaunchGuard:
         :rtype: bool
         """
 
-        if chat_id.isdigit(): return True
-        else: return False
+        if not chat_id.isdigit(): 
+            logging.critical("ID чата должен состоять только из цифр.")
+            return False
+        else: return True
     
     def __check_media_files(self):
 
