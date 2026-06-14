@@ -95,7 +95,7 @@ class BuildStatusInformer:
 class ExcelTemplater:
 	"""Генератор шаблона Excel-таблиц."""
 
-	@property
+	@classmethod
 	def headers(self) -> tuple[str, ...]:
 		"""Названия столбцов таблицы Excel."""
 
@@ -117,9 +117,9 @@ class ExcelTemplater:
 		wb = Workbook()
 		ws = wb.active
 		ws.title = "Лист 1"
-		ws.append(self.headers)
+		ws.append(self.headers())
 
-		for col_num, header_text in enumerate(self.headers, start=1):
+		for col_num, header_text in enumerate(self.headers(), start=1):
 			col_letter = get_column_letter(col_num)
 			header_len = len(header_text)
 			ws.column_dimensions[col_letter].width = max(header_len + 4, 12)

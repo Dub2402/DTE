@@ -1,3 +1,4 @@
 -r Source/TeleBotAdminPanel/requirements.txt
 openpyxl
 dotenv
+pandas
